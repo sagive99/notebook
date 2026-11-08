@@ -1,0 +1,10 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"], "env": ["VITE_GOOGLE_CLIENT_ID", "VITE_BASE_PATH"] },
+    "type-check": { "dependsOn": ["^build"] },
+    "lint": {},
+    "test": { "dependsOn": ["^build"] },
+    "dev": { "cache": false, "persistent": true }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@notebook/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Notebook domain model: entities, schemas, and pure rules for days, spaces, capture parsing, and sync merging.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

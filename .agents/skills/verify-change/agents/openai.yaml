@@ -1,0 +1,5 @@
+interface:
+  display_name: "Verify Change"
+  short_description: "Select and run proportionate repository checks"
+  default_prompt: "Use $verify-change to validate the current diff and report exact evidence."
+

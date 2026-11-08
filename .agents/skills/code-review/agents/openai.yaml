@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review"
+  short_description: "Tiered multi-lens review of a PR or diff"
+  default_prompt: "Use $code-review to review this branch against main and publish one tiered review."
