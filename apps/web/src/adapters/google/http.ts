@@ -1,17 +1,10 @@
-import { AuthRequiredError } from '../../ports';
+import { AuthRequiredError, OfflineError } from '../../ports';
 import type { GoogleAuth } from './auth';
 
 export class GoogleApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
     this.name = 'GoogleApiError';
-  }
-}
-
-export class OfflineError extends Error {
-  constructor() {
-    super('No connection. Changes are saved on this device and will sync later.');
-    this.name = 'OfflineError';
   }
 }
 

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AuthRequiredError } from '../../ports';
-import { safeStorage } from '../safe-storage';
+import type { AuthPort, AuthState } from '../../ports';
+import { safeStorage } from '../../platform/safe-storage';
 
 export const SCOPES = {
   drive: 'https://www.googleapis.com/auth/drive.appdata',
@@ -32,7 +33,6 @@ type GoogleIdentity = {
         callback: (response: TokenResponse) => void;
         error_callback: (error: { type?: string; message?: string }) => void;
       }) => TokenClient;
-      revoke: (token: string, done?: () => void) => void;
     };
   };
 };
@@ -53,8 +53,14 @@ type StoredToken = z.infer<typeof storedTokenSchema>;
 
 const TOKEN_KEY = 'notebook.google.token';
 const CONNECTED_KEY = 'notebook.google.connected';
+const GRANTED_KEY = 'notebook.google.scopes';
+const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const EXPIRY_MARGIN_MS = 60_000;
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
+
+const isExpired = (token: StoredToken): boolean => token.expiresAt - EXPIRY_MARGIN_MS <= Date.now();
+
+const readGrantedScopes = (): string[] => (safeStorage.get(GRANTED_KEY) ?? '').split(' ').filter(Boolean);
 
 const readStoredToken = (): StoredToken | null => {
   const raw = safeStorage.get(TOKEN_KEY);
@@ -66,7 +72,13 @@ const readStoredToken = (): StoredToken | null => {
   try {
     const parsed = storedTokenSchema.safeParse(JSON.parse(raw));
 
-    return parsed.success ? parsed.data : null;
+    if (!parsed.success || isExpired(parsed.data)) {
+      safeStorage.remove(TOKEN_KEY);
+
+      return null;
+    }
+
+    return parsed.data;
   } catch {
     return null;
   }
@@ -99,15 +111,14 @@ const loadScript = (): Promise<GoogleIdentity> => new Promise((resolve, reject) 
   document.head.appendChild(script);
 });
 
-export type AuthState = { status: 'signed-out' } | { status: 'expired'; scopes: string[] } | { status: 'signed-in'; scopes: string[] };
-
 /**
  * Google OAuth for a static site: Google Identity Services issues short-lived access tokens
  * in the browser. Tokens are cached until expiry so reopening the app within the hour needs no tap;
  * after that, a single tap re-authorizes (see ADR 0004).
  */
-export class GoogleAuth {
+export class GoogleAuth implements AuthPort {
   private token: StoredToken | null = readStoredToken();
+  private granted: string[] = readGrantedScopes();
   private client: TokenClient | null = null;
   private pending: { resolve: (token: StoredToken) => void; reject: (error: Error) => void; scopes: string[] } | null = null;
   private readonly listeners = new Set<() => void>();
@@ -121,30 +132,27 @@ export class GoogleAuth {
   }
 
   state(): AuthState {
-    if (this.token && this.token.expiresAt - EXPIRY_MARGIN_MS > Date.now()) {
-      return { status: 'signed-in', scopes: this.token.scopes };
+    if (this.validToken()) {
+      return { status: 'signed-in' };
     }
 
-    if (this.token || wasConnected()) {
-      return { status: 'expired', scopes: this.token?.scopes ?? [] };
-    }
-
-    return { status: 'signed-out' };
+    return wasConnected() ? { status: 'expired' } : { status: 'signed-out' };
   }
 
+  /** Whether the user granted a scope; remembered across token expiry so incremental grants persist. */
   hasScope(scope: string): boolean {
-    return this.token?.scopes.includes(scope) ?? false;
+    return this.granted.includes(scope);
   }
 
   /** A valid access token, or AuthRequiredError when the user must tap to reconnect. */
   accessToken(scope: string): string {
-    const state = this.state();
+    const token = this.validToken();
 
-    if (state.status !== 'signed-in' || !this.token || !this.token.scopes.includes(scope)) {
+    if (!token || !token.scopes.includes(scope)) {
       throw new AuthRequiredError();
     }
 
-    return this.token.accessToken;
+    return token.accessToken;
   }
 
   /** Marks the cached token unusable after Google rejected it. */
@@ -156,7 +164,7 @@ export class GoogleAuth {
 
   /** Must run from a user gesture: it may open Google's consent popup. */
   async connect(extraScopes: string[] = []): Promise<void> {
-    const scopes = [...new Set([...BASE_SCOPES, ...(this.token?.scopes ?? []), ...extraScopes])];
+    const scopes = [...new Set([...BASE_SCOPES, ...this.granted, ...extraScopes])];
     const google = await loadScript();
     const client = this.client ?? google.accounts.oauth2.initTokenClient({
       client_id: this.clientId,
@@ -174,21 +182,41 @@ export class GoogleAuth {
     });
 
     this.token = token;
+    this.granted = token.scopes;
     writeStoredToken(token);
+    safeStorage.set(GRANTED_KEY, token.scopes.join(' '));
     safeStorage.set(CONNECTED_KEY, '1');
     this.emit();
   }
 
+  /** Revokes the grant at Google (no sign-in script needed) and forgets everything stored locally. */
   async disconnect(): Promise<void> {
     const token = this.token?.accessToken;
     this.token = null;
+    this.granted = [];
     writeStoredToken(null);
+    safeStorage.remove(GRANTED_KEY);
     safeStorage.remove(CONNECTED_KEY);
     this.emit();
 
-    if (token && window.google) {
-      window.google.accounts.oauth2.revoke(token);
+    if (!token) {
+      return;
     }
+
+    const response = await fetch(REVOKE_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token }) }).catch(() => null);
+
+    if (!response?.ok) {
+      throw new Error('Disconnected on this phone, but Google could not be reached to revoke access. Remove it at myaccount.google.com/permissions.');
+    }
+  }
+
+  private validToken(): StoredToken | null {
+    if (this.token && isExpired(this.token)) {
+      this.token = null;
+      writeStoredToken(null);
+    }
+
+    return this.token;
   }
 
   private onToken(response: TokenResponse): void {

@@ -76,12 +76,9 @@ describe('CalendarSync', () => {
     const event = [...calendar.events.values()].find((entry) => entry.notebookItemId === moved);
     const removedEventId = store.getSnapshot().document.items[removed]?.calendarEventId ?? '';
 
-    if (event) {
-      calendar.events.set(event.id, { ...event, start: '15:30' });
-    }
-
+    calendar.editExternally(event?.id ?? '', { start: '15:30' });
     calendar.events.delete(removedEventId);
-    sync.reconcileDay('2026-11-10', await calendar.listDay('2026-11-10'));
+    await sync.reconcileDay('2026-11-10', await calendar.listDay('2026-11-10'));
     await sync.flush();
 
     const items = store.getSnapshot().document.items;
@@ -89,6 +86,34 @@ describe('CalendarSync', () => {
     expect(items[moved]?.time).toBe('15:30');
     expect(items[removed]).toMatchObject({ remind: false, calendarEventId: null });
     expect(calendar.calls.filter((call) => call.startsWith('update'))).toEqual([]);
+  });
+
+  it('follows an event moved to another day instead of unlinking it', async () => {
+    const { calendar, store, sync } = setup();
+    const id = addReminder(store, 'Moved to Thursday', '2026-11-10', '09:00');
+    await sync.flush();
+    const eventId = store.getSnapshot().document.items[id]?.calendarEventId ?? '';
+    calendar.editExternally(eventId, { day: '2026-11-12', start: '16:00' });
+
+    await sync.reconcileDay('2026-11-10', await calendar.listDay('2026-11-10'));
+
+    expect(store.getSnapshot().document.items[id]).toMatchObject({ day: '2026-11-12', time: '16:00', remind: true, calendarEventId: eventId });
+  });
+
+  it('never lets an older calendar event overwrite a newer item edit', async () => {
+    const { calendar, store, sync } = setup();
+    const id = addReminder(store, 'Original', '2026-11-10', '09:00');
+    await sync.flush();
+    const eventId = store.getSnapshot().document.items[id]?.calendarEventId ?? '';
+    const event = calendar.events.get(eventId);
+
+    if (event) {
+      calendar.events.set(eventId, { ...event, title: 'Stale title', updated: '2000-01-01T00:00:00.000Z' });
+    }
+
+    await sync.reconcileDay('2026-11-10', await calendar.listDay('2026-11-10'));
+
+    expect(store.getSnapshot().document.items[id]?.text).toBe('Original');
   });
 
   it('queues work while signed out and pushes it once a calendar is available', async () => {

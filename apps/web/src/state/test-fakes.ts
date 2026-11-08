@@ -35,12 +35,19 @@ export class MemoryRemoteStore implements RemoteDocumentStore {
       throw error;
     }
 
+    this.loads += 1;
     const snapshot = this.stored;
     const interleave = this.interleave;
     this.interleave = null;
     interleave?.();
 
     return snapshot;
+  }
+
+  loads = 0;
+
+  async version(): Promise<string | null> {
+    return this.stored?.version ?? null;
   }
 
   async save(document: NotebookDocument, expectedVersion: string | null): Promise<StoredDocument> {
@@ -64,9 +71,24 @@ export class FakeCalendar implements CalendarGateway {
   events = new Map<string, CalendarEvent>();
   calls: string[] = [];
   private counter = 0;
+  private clock = 0;
 
   async listDay(day: string): Promise<CalendarEvent[]> {
     return [...this.events.values()].filter((event) => event.day === day);
+  }
+
+  async get(eventId: string): Promise<CalendarEvent | null> {
+    return this.events.get(eventId) ?? null;
+  }
+
+  /** Simulates an edit made in Google or iPhone Calendar. */
+  editExternally(eventId: string, patch: Partial<CalendarEvent>): void {
+    const event = this.events.get(eventId);
+
+    if (event) {
+      this.clock += 1;
+      this.events.set(eventId, { ...event, ...patch, updated: new Date(Date.UTC(2030, 0, 1, 0, 0, this.clock)).toISOString() });
+    }
   }
 
   async create(event: NewCalendarEvent): Promise<CalendarEvent> {
@@ -92,7 +114,7 @@ export class FakeCalendar implements CalendarGateway {
   }
 
   private toEvent(id: string, event: NewCalendarEvent): CalendarEvent {
-    return { id, calendarId: 'primary', title: event.title, day: event.day, start: event.start, end: event.end, allDay: event.start === null, notebookItemId: event.notebookItemId, htmlLink: null, editable: true };
+    return { id, calendarId: 'primary', title: event.title, day: event.day, start: event.start, end: event.end, allDay: event.start === null, notebookItemId: event.notebookItemId, htmlLink: null, editable: true, updated: new Date(0).toISOString() };
   }
 }
 

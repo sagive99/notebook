@@ -9,7 +9,7 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 - **Today page:** one day at a time: calendar events, the notebook (tasks and notes for the day), and blocks pinned from Spaces. The user chooses and orders the blocks.
 - **Quick capture:** one text box, available everywhere. Understands `@person`, `#tag`, day words ("tomorrow", "מחר") and times ("14:30").
 - **Spaces:** user-created sections with a layout (list, board, people, notes) and chosen item fields. The ideas backlog and the team board are ordinary Spaces.
-- **People:** team members with a "now" line (what they are working on), linked open tasks, and running 1:1 notes.
+- **People:** one team roster shared by every People-layout space: a "now" line (what they are working on), a blocked flag, linked open tasks, and running 1:1 notes.
 - **Calendar sync:** two-way link with Google Calendar, which the iPhone Calendar mirrors.
 - **Backup and multi-device sync:** the whole notebook is stored in the user's Google Drive app-data folder and on each device.
 
@@ -27,6 +27,7 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 | Evening cutoff | The time (default 18:00) after which new captures default to tomorrow morning. |
 | Calendar + reminder | An item flag: the item has a Google Calendar event with a popup alert. |
 | Waiting on | Open tasks linked to a person. |
+| Blocked | A person flagged as stuck on something outside their control. |
 | Check in | A person whose "now" line has not been updated for 3+ days. |
 | Tombstone | A deleted entity kept with `deleted: true` so deletions survive merging. |
 

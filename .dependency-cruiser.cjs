@@ -16,6 +16,13 @@ module.exports = {
       to: { path: '^apps/web/src/adapters' },
     },
     {
+      name: 'only-composition-root-constructs-adapters',
+      comment: 'State depends on ports; app-services.ts is the one place that wires adapters.',
+      severity: 'error',
+      from: { path: '^apps/web/src/state', pathNot: '^apps/web/src/state/app-services\\.ts$' },
+      to: { path: '^apps/web/src/adapters' },
+    },
+    {
       name: 'adapters-do-not-know-ui-or-state',
       severity: 'error',
       from: { path: '^apps/web/src/adapters' },

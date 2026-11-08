@@ -1,4 +1,4 @@
-import { addDays, deleteItem, liveSpaces, livePeople, toIsoDate, updateItem } from '@notebook/core';
+import { addDays, deleteItem, liveSpaces, livePeople, scheduleItem, toIsoDate, updateItem } from '@notebook/core';
 import type { ItemKind, ItemPatch, Priority } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
@@ -56,6 +56,11 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
     onClose();
   };
 
+  const scheduleFor = (day: string) => {
+    run((current, context) => scheduleItem(updateItem(current, id, { text: (draft.text ?? item.text).trim() }, context), id, day, context));
+    onClose();
+  };
+
   return (
     <Sheet label="Edit item" onClose={onClose}>
       <SheetHeader title="Edit" onCancel={onClose} action={{ label: 'Save', onClick: save, disabled: (draft.text ?? '').trim() === '' || linkInvalid }} />
@@ -76,8 +81,8 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
         <div class="field">
           <SectionLabel>Quick move</SectionLabel>
           <div class="chip-row chip-row--wrap">
-            <Chip onClick={() => moveTo({ day: today, done: false })}>Today</Chip>
-            <Chip onClick={() => moveTo({ day: addDays(today, 1), done: false })}>Tomorrow</Chip>
+            <Chip onClick={() => scheduleFor(today)}>Today</Chip>
+            <Chip onClick={() => scheduleFor(addDays(today, 1))}>Tomorrow</Chip>
             {document.settings.backlogSpaceId && document.spaces[document.settings.backlogSpaceId] && !document.spaces[document.settings.backlogSpaceId]?.deleted ? <Chip onClick={() => moveTo({ day: null, time: null, remind: false, spaceId: document.settings.backlogSpaceId, columnId: null })}>Backlog</Chip> : null}
           </div>
         </div>
@@ -143,7 +148,7 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
           {fields.tags || (draft.tags?.length ?? 0) > 0 ? (
             <label class="settings-row">
               <span class="settings-row__label">Tags</span>
-              <input class="text-input" placeholder="work, team" value={(draft.tags ?? []).join(', ')} onInput={(event) => set({ tags: event.currentTarget.value.split(',').map((tag) => tag.trim().replace(/^#/u, '').toLowerCase()).filter(Boolean).slice(0, 32) })} />
+              <input class="text-input" dir="auto" placeholder="work, team" value={(draft.tags ?? []).join(', ')} onInput={(event) => set({ tags: event.currentTarget.value.split(',').map((tag) => tag.trim().replace(/^#/u, '').toLowerCase()).filter(Boolean).slice(0, 32) })} />
             </label>
           ) : null}
         </div>

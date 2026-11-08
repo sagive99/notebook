@@ -2,9 +2,8 @@ import { toIsoDate } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { createContext } from 'preact';
 import { useCallback, useContext, useEffect, useRef, useState } from 'preact/hooks';
-import type { AuthState } from '../adapters/google/auth';
 import { AuthRequiredError } from '../ports';
-import type { CalendarEvent, StarredEmail } from '../ports';
+import type { AuthState, CalendarEvent, StarredEmail } from '../ports';
 import type { AppServices } from './app-services';
 import type { Command, StoreSnapshot } from './notebook-store';
 
@@ -143,7 +142,7 @@ export const useDayEvents = (day: IsoDate) => {
     }
 
     const events = await calendar.listDay(day);
-    calendarSync.reconcileDay(day, events);
+    await calendarSync.reconcileDay(day, events);
 
     return events;
   }, [calendar, calendarSync, day]);

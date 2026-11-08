@@ -10,6 +10,8 @@ export type StoredDocument = {
 export type RemoteDocumentStore = {
   /** Returns null when no notebook has been stored yet. */
   load: () => Promise<StoredDocument | null>;
+  /** The stored version without downloading the document; null when nothing is stored yet. */
+  version: () => Promise<string | null>;
   /** Writes the document; rejects with ConflictError when the stored version is no longer `expectedVersion`. */
   save: (document: NotebookDocument, expectedVersion: string | null) => Promise<StoredDocument>;
 };
@@ -34,6 +36,8 @@ export type CalendarEvent = {
   notebookItemId: string | null;
   htmlLink: string | null;
   editable: boolean;
+  /** When the event last changed in the calendar (ISO timestamp). */
+  updated: string;
 };
 
 export type NewCalendarEvent = {
@@ -48,6 +52,8 @@ export type NewCalendarEvent = {
 
 export type CalendarGateway = {
   listDay: (day: IsoDate) => Promise<CalendarEvent[]>;
+  /** One event by id, or null when it was deleted or cancelled. */
+  get: (eventId: string) => Promise<CalendarEvent | null>;
   create: (event: NewCalendarEvent) => Promise<CalendarEvent>;
   update: (eventId: string, event: NewCalendarEvent) => Promise<CalendarEvent>;
   remove: (eventId: string) => Promise<void>;
@@ -60,9 +66,24 @@ export type StarredEmail = {
   link: string;
 };
 
+export type AuthState = { status: 'signed-out' } | { status: 'expired' } | { status: 'signed-in' };
+
+/** What the app needs to know about the Google session, independent of the sign-in library. */
+export type AuthPort = {
+  state: () => AuthState;
+  subscribe: (listener: () => void) => () => void;
+};
+
 export type MailGateway = {
   listStarred: (limit: number) => Promise<StarredEmail[]>;
 };
+
+export class OfflineError extends Error {
+  constructor() {
+    super('No connection. Changes are saved on this device and will sync later.');
+    this.name = 'OfflineError';
+  }
+}
 
 export class ConflictError extends Error {
   constructor() {

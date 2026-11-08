@@ -21,7 +21,7 @@ The owner wants calendar integration built into the app, two ways: events added 
 - An item flagged **Calendar + reminder** with a day gets a calendar event (timed if the item has a time, otherwise all-day) with a popup alert at the start time. That event is how the phone notifies the user.
 - Link both ways: the event stores `extendedProperties.private.notebookItemId`; the item stores `calendarEventId`.
   - Item edits (text, day, time) update the event; turning the reminder off or deleting the item deletes the event.
-  - When a day's events load, a linked event that moved or was renamed in the calendar updates the item, and a linked event deleted in the calendar turns the item's reminder off.
+  - When a day's events load, a linked event that moved (to another time or another day) or was renamed in the calendar updates the item, but only when the calendar edit is newer than the item's own `updatedAt`. A linked item whose event is missing from the day is looked up by id; only a deleted or cancelled event turns the item's reminder off.
 - Pending calendar work is queued on the device and pushed when signed in, so offline or signed-out edits are not lost. Only local changes enqueue work; documents merged from other devices do not, which avoids duplicate events.
 - Editing an existing event never resets its reminder settings unless the event belongs to a notebook item.
 
@@ -36,9 +36,9 @@ The owner wants calendar integration built into the app, two ways: events added 
 
 - Reminders arrive through Google Calendar notifications on the iPhone.
 - If two devices add the same reminder before either syncs the event id, a duplicate event can appear (rare; delete one).
-- Calendar-side changes reach items only when that day is viewed in the app.
+- Calendar-side changes reach items when the item's day (or the event's new day) is viewed in the app.
 - Only the primary calendar is read; shared or secondary calendars are not shown yet.
 
 ## Verification
 
-- `apps/web/src/state/calendar-sync.unit.test.ts` covers create, update, removal on reminder-off and delete, no-op pushes, calendar-side moves and deletions, and queued work.
+- `apps/web/src/state/calendar-sync.unit.test.ts` covers create, update, removal on reminder-off and delete, no-op pushes, calendar-side moves (same day and another day) and deletions, stale events never overwriting newer items, and queued work.

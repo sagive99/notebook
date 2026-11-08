@@ -1,4 +1,4 @@
-import { addItem, spaceItems, updateItem } from '@notebook/core';
+import { addItem, itemColumnId, moveItemToColumn, spaceItems } from '@notebook/core';
 import type { IsoDate, Item, ItemKind, Space } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook, useToday } from '../../state/hooks';
@@ -64,29 +64,25 @@ const ListLayout = ({ space, items, today }: { space: Space; items: Item[]; toda
 
 const BoardLayout = ({ space, items, today }: { space: Space; items: Item[]; today: IsoDate }) => {
   const { run } = useNotebook();
-  const first = space.columns[0]?.id ?? null;
-  const columnOf = (item: Item): string | null => (item.columnId && space.columns.some((column) => column.id === item.columnId) ? item.columnId : first);
-  const lastColumnId = space.columns.at(-1)?.id ?? null;
-
   const move = (item: Item, offset: number) => {
-    const index = space.columns.findIndex((column) => column.id === columnOf(item));
+    const index = space.columns.findIndex((column) => column.id === itemColumnId(space, item));
     const target = space.columns[index + offset];
 
     if (!target) {
       return;
     }
 
-    run((current, context) => updateItem(current, item.id, { columnId: target.id, done: target.id === lastColumnId }, context));
+    run((current, context) => moveItemToColumn(current, item.id, target.id, context));
   };
 
   return (
     <div class="board" role="list">
       {space.columns.map((column, index) => {
-        const cards = items.filter((item) => columnOf(item) === column.id);
+        const cards = items.filter((item) => itemColumnId(space, item) === column.id);
 
         return (
           <section key={column.id} class="board__column" role="listitem" aria-label={column.name}>
-            <h2 class="board__title">{column.name} <span class="card__meta">{cards.length}</span></h2>
+            <h2 class="board__title"><span dir="auto">{column.name}</span> <span class="card__meta">{cards.length}</span></h2>
             {cards.map((item) => (
               <div key={item.id} class="board__card">
                 <ItemRow item={item} today={today} showDay />

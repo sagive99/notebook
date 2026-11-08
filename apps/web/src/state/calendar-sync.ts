@@ -1,6 +1,6 @@
 import { updateItem } from '@notebook/core';
 import type { IsoDate, Item, NotebookDocument } from '@notebook/core';
-import { safeStorage } from '../adapters/safe-storage';
+import { safeStorage } from '../platform/safe-storage';
 import { AuthRequiredError } from '../ports';
 import type { CalendarEvent, CalendarGateway, NewCalendarEvent } from '../ports';
 import type { ChangeSource, NotebookStore } from './notebook-store';
@@ -94,40 +94,49 @@ export class CalendarSync {
   }
 
   /**
-   * Applies calendar-side edits to linked items after the day's events were fetched:
-   * a moved event moves its item, and a deleted event turns the item's reminder off.
+   * Applies calendar-side edits to linked items after a day's events were fetched: an event that
+   * moved (even to another day) or was renamed updates its item when the calendar edit is newer,
+   * and an event that no longer exists turns the item's reminder off.
    */
-  reconcileDay(day: IsoDate, events: ReadonlyArray<CalendarEvent>): void {
+  async reconcileDay(day: IsoDate, events: ReadonlyArray<CalendarEvent>): Promise<void> {
+    const gateway = this.gateway;
     const document = this.store.getSnapshot().document;
     const byItem = new Map(events.filter((event) => event.notebookItemId !== null).map((event) => [event.notebookItemId, event]));
-    const linked = Object.values(document.items).filter((item) => !item.deleted && item.calendarEventId !== null && (item.day === day || byItem.has(item.id)));
+    const linked = Object.values(document.items).filter((item) => !item.deleted && item.calendarEventId !== null && !this.pending.has(item.id) && (item.day === day || byItem.has(item.id)));
 
     for (const item of linked) {
-      const event = byItem.get(item.id);
+      const listed = byItem.get(item.id);
+      const event = listed ?? (gateway && item.calendarEventId ? await gateway.get(item.calendarEventId).catch(() => undefined) : undefined);
 
-      if (this.pending.has(item.id)) {
+      // Unknown (no gateway, offline, or lookup failed): leave the link alone and try again next time.
+      if (event === undefined) {
         continue;
       }
 
-      if (!event) {
-        if (item.day === day) {
-          this.pushed.delete(item.id);
-          this.store.run((current, context) => updateItem(current, item.id, { remind: false, calendarEventId: null }, context));
-        }
+      if (event === null) {
+        this.pushed.delete(item.id);
+        this.store.run((current, context) => updateItem(current, item.id, { remind: false, calendarEventId: null }, context));
 
         continue;
       }
 
-      const title = event.title === '(No title)' ? item.text : event.title;
-
-      if (event.day !== item.day || event.start !== item.time || title !== item.text) {
-        const next = { day: event.day, time: event.start, text: title };
-        this.pushed.set(item.id, signature({ title, day: event.day, start: event.start, end: null, remindMinutesBefore: 0, notebookItemId: item.id }));
-        this.store.run((current, context) => updateItem(current, item.id, next, context));
-      }
+      this.applyCalendarEdit(item, event);
     }
 
     this.persist();
+  }
+
+  /** Calendar edits win only when they are newer than the item, so a stale event never overwrites a newer edit. */
+  private applyCalendarEdit(item: Item, event: CalendarEvent): void {
+    const title = event.title === '(No title)' ? item.text : event.title;
+    const changed = event.day !== item.day || event.start !== item.time || title !== item.text;
+
+    if (!changed || event.updated <= item.updatedAt) {
+      return;
+    }
+
+    this.pushed.set(item.id, signature({ title, day: event.day, start: event.start, end: null, remindMinutesBefore: 0, notebookItemId: item.id }));
+    this.store.run((current, context) => updateItem(current, item.id, { day: event.day, time: event.start, text: title }, context));
   }
 
   private onDocumentChange(before: NotebookDocument, after: NotebookDocument, source: ChangeSource): void {

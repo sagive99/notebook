@@ -4,14 +4,14 @@ import { DriveDocumentStore } from '../adapters/google/drive-store';
 import { GmailGateway } from '../adapters/google/gmail';
 import { createLocalStore } from '../adapters/local-store';
 import type { AppConfig } from '../config';
-import type { CalendarGateway, MailGateway } from '../ports';
+import type { AuthPort, CalendarGateway, MailGateway } from '../ports';
 import { CalendarSync } from './calendar-sync';
 import { NotebookStore } from './notebook-store';
 
 export type AppServices = {
   config: AppConfig;
   store: NotebookStore;
-  auth: GoogleAuth | null;
+  auth: AuthPort | null;
   calendar: CalendarGateway | null;
   mail: MailGateway | null;
   calendarSync: CalendarSync;

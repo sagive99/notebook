@@ -1,7 +1,7 @@
 import { parseDocument } from '@notebook/core';
 import type { NotebookDocument } from '@notebook/core';
 import type { LocalDocumentStore } from '../ports';
-import { safeStorage } from './safe-storage';
+import { safeStorage } from '../platform/safe-storage';
 
 const KEY = 'notebook.document.v1';
 

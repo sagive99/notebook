@@ -14,7 +14,8 @@ const eventSchema = z.object({
   id: z.string().min(1),
   status: z.string().optional(),
   summary: z.string().optional(),
-  htmlLink: z.string().url().optional(),
+  htmlLink: z.string().regex(/^https:\/\/[^\s]+$/u).optional(),
+  updated: z.string().optional(),
   start: z.object({ date: z.string().optional(), dateTime: z.string().optional() }),
   end: z.object({ date: z.string().optional(), dateTime: z.string().optional() }).optional(),
   extendedProperties: z.object({ private: z.record(z.string(), z.string()).optional() }).optional(),
@@ -42,6 +43,7 @@ const toCalendarEvent = (event: GoogleEvent): CalendarEvent => {
     notebookItemId: event.extendedProperties?.private?.[ITEM_PROPERTY] ?? null,
     htmlLink: event.htmlLink ?? null,
     editable: event.organizer?.self !== false,
+    updated: event.updated ?? new Date(0).toISOString(),
   };
 };
 
@@ -73,6 +75,24 @@ export class GoogleCalendarGateway implements CalendarGateway {
     const listing = listSchema.parse(await response.json());
 
     return listing.items.filter((event) => event.status !== 'cancelled').map(toCalendarEvent);
+  }
+
+  async get(eventId: string): Promise<CalendarEvent | null> {
+    const response = await googleFetch(this.auth, SCOPES.calendar, `${API}/${encodeURIComponent(eventId)}`).catch((error: unknown) => {
+      if (error instanceof GoogleApiError && (error.status === 404 || error.status === 410)) {
+        return null;
+      }
+
+      throw error;
+    });
+
+    if (!response) {
+      return null;
+    }
+
+    const event = eventSchema.parse(await response.json());
+
+    return event.status === 'cancelled' ? null : toCalendarEvent(event);
   }
 
   async create(event: NewCalendarEvent): Promise<CalendarEvent> {

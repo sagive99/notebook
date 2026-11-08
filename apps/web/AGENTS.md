@@ -10,8 +10,8 @@ Inherits the root [AGENTS.md](../../AGENTS.md) and [standards](../../docs/STANDA
 
 ## Layout and dependency direction
 
-- `src/ports.ts`: interfaces and typed errors. `src/adapters/`: implementations. `src/state/`: store, calendar sync, hooks, composition root (`app-services.ts`). `src/ui/`: screens, blocks, sheets, components.
-- UI never imports `adapters/`. Adapters never import `state/` or `ui/`. Enforced by `pnpm validate:deps` ([ADR 0006](../../docs/adr/0006-workspace-layering.md)).
+- `src/ports.ts`: interfaces and typed errors. `src/adapters/`: implementations. `src/state/`: store, calendar sync, hooks, composition root (`app-services.ts`). `src/platform/`: domain-free browser utilities. `src/ui/`: screens, blocks, sheets, components.
+- UI never imports `adapters/`; in `state/` only `app-services.ts` does. Adapters never import `state/` or `ui/`. Enforced by `pnpm validate:deps` ([ADR 0006](../../docs/adr/0006-workspace-layering.md)).
 - Domain changes (schemas, commands, selectors) go in `@notebook/core`, not here.
 
 ## Rules

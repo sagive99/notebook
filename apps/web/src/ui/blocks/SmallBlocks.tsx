@@ -1,4 +1,4 @@
-import { addItem, spaceItems, updateItem, waitingCount } from '@notebook/core';
+import { addItem, blockedCount, openSpaceItems, scheduleItem, spaceItems, waitingCount } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook, useServices, useStarredEmails } from '../../state/hooks';
@@ -11,13 +11,14 @@ import { href } from '../router';
 export const TeamBlock = () => {
   const { document } = useNotebook();
   const count = waitingCount(document);
+  const blocked = blockedCount(document);
 
   return (
     <a class="card link-card" href={href({ name: 'people' })}>
       <span class="link-card__icon" style={{ background: SPACE_COLORS.orange.bg, color: SPACE_COLORS.orange.fg }}><PeopleIcon size={18} /></span>
       <span class="link-card__body">
         <span class="link-card__title">Team · {count === 0 ? 'nothing waiting' : `waiting on ${count}`}</span>
-        <span class="link-card__meta">Open tasks linked to people</span>
+        <span class="link-card__meta">{blocked > 0 ? `${blocked} blocked · ` : ''}Open tasks linked to people</span>
       </span>
       <ChevronRightIcon size={18} />
     </a>
@@ -80,7 +81,7 @@ export const BacklogPickBlock = ({ today }: { today: IsoDate }) => {
           <p class="pick__text" dir="auto">{idea.text}</p>
           <div class="card__foot">
             <button type="button" class="link-button" disabled={ideas.length < 2} onClick={() => setIndex(index + 1)}>Another one</button>
-            <button type="button" class="pill-button pill-button--small" onClick={() => run((current, context) => updateItem(current, idea.id, { day: today, kind: idea.kind === 'idea' ? 'task' : idea.kind }, context))}>→ Today</button>
+            <button type="button" class="pill-button pill-button--small" onClick={() => run((current, context) => scheduleItem(current, idea.id, today, context))}>→ Today</button>
           </div>
         </div>
       ) : <Empty>{backlogId ? 'The backlog is empty.' : 'Pick a backlog space in Customize Today.'}</Empty>}
@@ -96,7 +97,7 @@ export const SpaceBlock = ({ spaceId, today }: { spaceId: string; today: IsoDate
     return null;
   }
 
-  const open = spaceItems(document, spaceId).filter((item) => !item.done && (space.layout !== 'board' || item.columnId !== space.columns.at(-1)?.id));
+  const open = openSpaceItems(document, spaceId);
 
   return (
     <Card>

@@ -43,6 +43,10 @@ export class DriveDocumentStore implements RemoteDocumentStore {
     return { document: parsed.document, version: meta.version };
   }
 
+  async version(): Promise<string | null> {
+    return (await this.findFile())?.version ?? null;
+  }
+
   async save(document: NotebookDocument, expectedVersion: string | null): Promise<StoredDocument> {
     const current = await this.findFile();
 

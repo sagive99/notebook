@@ -19,7 +19,8 @@ The app's riskiest logic (carry-over, capture parsing, merge) must be testable w
 - `@notebook/web` is layered:
   - `ports.ts`: interfaces for remote and local document stores, calendar, and mail.
   - `adapters/`: Google (auth, Drive, Calendar, Gmail) and local-storage implementations of the ports. Adapters never import `state/` or `ui/`.
-  - `state/`: `NotebookStore`, `CalendarSync`, hooks, and `app-services.ts`, the only composition root that constructs adapters.
+  - `state/`: `NotebookStore`, `CalendarSync`, hooks, and `app-services.ts`, the only composition root that constructs adapters. Other state modules depend on ports only.
+  - `platform/`: tiny browser utilities with no domain knowledge (safe `localStorage` access), usable by state and adapters.
   - `ui/`: screens, blocks, sheets, components. UI depends on `state/`, `ports.ts`, and core, never on `adapters/`.
 - `pnpm validate:deps` (dependency-cruiser) enforces these rules and forbids cycles.
 
@@ -35,4 +36,5 @@ The app's riskiest logic (carry-over, capture parsing, merge) must be testable w
 
 ## Verification
 
-- `.dependency-cruiser.cjs` rules `core-stays-pure`, `ui-uses-ports-not-adapters`, `adapters-do-not-know-ui-or-state`, and `no-circular` pass in CI.
+- `.dependency-cruiser.cjs` rules `core-stays-pure`, `ui-uses-ports-not-adapters`, `only-composition-root-constructs-adapters`, `adapters-do-not-know-ui-or-state`, and `no-circular` pass in CI.
+- Board, scheduling, and other domain rules live in `@notebook/core` with unit tests, not in UI components.

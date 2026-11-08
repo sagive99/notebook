@@ -1,7 +1,6 @@
-import { addItem, createDocument, updateItem } from '@notebook/core';
+import { addItem, createDocument, deleteItem, updateItem } from '@notebook/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { OfflineError } from '../adapters/google/http';
-import { AuthRequiredError } from '../ports';
+import { AuthRequiredError, OfflineError } from '../ports';
 import { NotebookStore } from './notebook-store';
 import { MemoryRemoteStore, memoryLocalStore, sequentialIds } from './test-fakes';
 
@@ -98,5 +97,40 @@ describe('NotebookStore', () => {
     await syncing;
 
     expect(store.getSnapshot().document.items[id]?.text).toBe('edited mid-sync');
+    expect(store.getSnapshot().status.kind).toBe('pending');
+  });
+
+  it('skips the download when neither side changed since the last sync', async () => {
+    const remote = new MemoryRemoteStore();
+    const { store } = make(remote);
+    store.setRemote(remote, { kind: 'pending' });
+    store.run((document, context) => addItem(document, { kind: 'task', text: 'once' }, context).document);
+    await store.sync();
+    const loads = remote.loads;
+
+    await store.sync();
+
+    expect(remote.loads).toBe(loads);
+    expect(store.getSnapshot().status.kind).toBe('synced');
+
+    remote.writeExternally(remote.stored?.document ?? createDocument({ now: clock(), newId: sequentialIds() }));
+    await store.sync();
+
+    expect(remote.loads).toBe(loads + 1);
+  });
+
+  it('prunes old tombstones from the device copy as well as the upload', async () => {
+    const remote = new MemoryRemoteStore();
+    const old = { now: new Date('2026-09-01T09:00:00Z'), newId: () => 'old-1' };
+    const local = memoryLocalStore();
+    const seeded = addItem(createDocument({ now: old.now, newId: sequentialIds() }), { kind: 'task', text: 'gone long ago' }, old);
+    local.save(deleteItem(seeded.document, 'old-1', old));
+    const { store } = make(remote, local);
+    store.setRemote(remote, { kind: 'pending' });
+
+    await store.sync();
+
+    expect(store.getSnapshot().document.items['old-1']).toBeUndefined();
+    expect(remote.stored?.document.items['old-1']).toBeUndefined();
   });
 });

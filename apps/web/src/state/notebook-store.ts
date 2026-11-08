@@ -1,7 +1,6 @@
 import { createDocument, mergeDocuments, pruneTombstones } from '@notebook/core';
 import type { CommandContext, NotebookDocument } from '@notebook/core';
-import { OfflineError } from '../adapters/google/http';
-import { AuthRequiredError, ConflictError } from '../ports';
+import { AuthRequiredError, ConflictError, OfflineError } from '../ports';
 import type { LocalDocumentStore, RemoteDocumentStore } from '../ports';
 
 export type SyncStatus =
@@ -46,6 +45,9 @@ export class NotebookStore {
   private status: SyncStatus;
   private snapshot: StoreSnapshot;
   private remoteVersion: string | null = null;
+  /** Bumped on every local change; compared with `syncedRevision` to know whether anything awaits upload. */
+  private revision = 0;
+  private syncedRevision = -1;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private syncing: Promise<void> | null = null;
   private resyncRequested = false;
@@ -102,6 +104,7 @@ export class NotebookStore {
     }
 
     this.document = after;
+    this.revision += 1;
     this.local.save(after);
 
     if (this.remote && this.status.kind !== 'needs-auth' && this.status.kind !== 'signed-out') {
@@ -120,6 +123,7 @@ export class NotebookStore {
   setRemote(remote: RemoteDocumentStore | null, status: SyncStatus): void {
     this.remote = remote;
     this.remoteVersion = null;
+    this.syncedRevision = -1;
     this.setStatus(status);
   }
 
@@ -173,8 +177,15 @@ export class NotebookStore {
 
   private async syncOnce(remote: RemoteDocumentStore): Promise<void> {
     this.setStatus({ kind: 'syncing' });
+    const startRevision = this.revision;
 
     try {
+      if (this.syncedRevision === startRevision && this.remoteVersion !== null && (await remote.version()) === this.remoteVersion) {
+        this.setStatus({ kind: 'synced', at: Date.now() });
+
+        return;
+      }
+
       for (let attempt = 0; attempt < MAX_CONFLICT_RETRIES; attempt += 1) {
         const stored = await remote.load();
         const merged = pruneTombstones(stored ? mergeDocuments(stored.document, this.document) : this.document, this.clock());
@@ -186,7 +197,16 @@ export class NotebookStore {
             this.remoteVersion = saved.version;
           }
 
-          this.adoptMerged(merged);
+          this.syncedRevision = startRevision;
+          const editedMeanwhile = this.adoptMerged(merged);
+
+          if (editedMeanwhile) {
+            this.setStatus({ kind: 'pending' });
+            this.scheduleSync();
+
+            return;
+          }
+
           this.setStatus({ kind: 'synced', at: Date.now() });
 
           return;
@@ -203,18 +223,22 @@ export class NotebookStore {
     }
   }
 
-  /** Takes the merged result while keeping edits made during the round-trip. */
-  private adoptMerged(merged: NotebookDocument): void {
+  /**
+   * Takes the merged result while keeping edits made during the round-trip, pruned like the upload.
+   * Returns true when such edits exist and still need uploading.
+   */
+  private adoptMerged(merged: NotebookDocument): boolean {
     const before = this.document;
-    const next = mergeDocuments(merged, before);
+    const next = pruneTombstones(mergeDocuments(merged, before), this.clock());
+    const editedMeanwhile = this.revision !== this.syncedRevision;
 
-    if (sameDocument(next, before)) {
-      return;
+    if (!sameDocument(next, before)) {
+      this.document = next;
+      this.local.save(next);
+      this.changeListeners.forEach((listener) => listener(before, next, 'remote'));
     }
 
-    this.document = next;
-    this.local.save(next);
-    this.changeListeners.forEach((listener) => listener(before, next, 'remote'));
+    return editedMeanwhile;
   }
 
   private statusForError(error: unknown): SyncStatus {

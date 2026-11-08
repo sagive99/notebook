@@ -93,7 +93,7 @@ export const SpaceFormScreen = ({ id }: { id?: string }) => {
             <SectionLabel>Columns</SectionLabel>
             {columns.map((column, index) => (
               <div key={column.id} class="column-row">
-                <input class="text-input" aria-label={`Column ${index + 1} name`} maxLength={60} value={column.name} onInput={(event) => {
+                <input class="text-input" dir="auto" aria-label={`Column ${index + 1} name`} maxLength={60} value={column.name} onInput={(event) => {
                   const value = event.currentTarget.value;
                   setColumns(columns.map((entry) => (entry.id === column.id ? { ...entry, name: value } : entry)));
                 }} />
