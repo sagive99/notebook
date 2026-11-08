@@ -75,6 +75,8 @@ export const teamSummary = (document: NotebookDocument, now: Date): PersonSummar
   }));
 };
 
+export const blockedCount = (document: NotebookDocument): number => livePeople(document).filter((person) => person.blocked).length;
+
 export const waitingCount = (document: NotebookDocument): number => liveItems(document).filter((item) => item.kind === 'task' && !item.done && item.personId !== null).length;
 
 /** The configured Today blocks, followed by a disabled entry for every space not yet listed. */

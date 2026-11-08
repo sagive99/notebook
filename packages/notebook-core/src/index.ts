@@ -5,3 +5,4 @@ export * from './document';
 export * from './capture';
 export * from './selectors';
 export * from './merge';
+export * from './board';

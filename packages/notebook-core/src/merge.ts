@@ -8,7 +8,7 @@ const newer = <T extends Versioned>(left: T | undefined, right: T | undefined): 
     return right;
   }
 
-  if (!right) {
+  if (!right || left === right) {
     return left;
   }
 

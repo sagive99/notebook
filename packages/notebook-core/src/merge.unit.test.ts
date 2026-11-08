@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addItem, createDocument, deleteItem, updateItem } from './document';
+import { addItem, addPerson, createDocument, deleteItem, updateItem } from './document';
 import { mergeDocuments, parseDocument, pruneTombstones } from './merge';
 import { testContext } from './test-support';
 
@@ -37,6 +37,19 @@ describe('pruneTombstones', () => {
 
     expect(pruneTombstones(deleted, new Date('2026-10-20T09:00:00')).items[old.item.id]).toBeDefined();
     expect(pruneTombstones(deleted, new Date('2026-11-09T09:00:00')).items[old.item.id]).toBeUndefined();
+  });
+});
+
+describe('schema evolution', () => {
+  it('reads v1 people written before the blocked flag existed', () => {
+    const context = testContext();
+    const document = JSON.parse(JSON.stringify(addPerson(createDocument(context), 'Noa', context).document)) as { people: Record<string, Record<string, unknown>> };
+    Object.values(document.people).forEach((person) => {
+      delete person.blocked;
+    });
+    const parsed = parseDocument(document);
+
+    expect(parsed.ok && Object.values(parsed.document.people)[0]?.blocked).toBe(false);
   });
 });
 

@@ -20,8 +20,6 @@ const isAfterCutoff = (now: Date, cutoff: ClockTime): boolean => toClockTime(now
 /** Which day a capture defaults to: after the evening cutoff, thoughts are meant for tomorrow morning. */
 export const defaultCaptureTarget = (now: Date, eveningCutoff: ClockTime): CaptureTarget => (isAfterCutoff(now, eveningCutoff) ? 'tomorrow' : 'today');
 
-export const targetToDay = (target: CaptureTarget, now: Date): IsoDate => (target === 'tomorrow' ? addDays(toIsoDate(now), 1) : toIsoDate(now));
-
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 
 /** Matches "@Name" against people, preferring the longest name so "@Dana Levi" beats "@Dana". */

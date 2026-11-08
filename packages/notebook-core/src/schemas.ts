@@ -39,6 +39,8 @@ export const personSchema = z.object({
   name: z.string().min(1).max(120),
   now: z.string().max(500).default(''),
   nowUpdatedAt: timestampSchema.nullable().default(null),
+  /** Blocked on something outside their control; added after v1 shipped, hence the default. */
+  blocked: z.boolean().default(false),
   notes: z.string().max(20_000).default(''),
   order: z.number().finite().default(0),
 });

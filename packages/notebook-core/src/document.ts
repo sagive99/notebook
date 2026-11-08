@@ -120,6 +120,24 @@ export const updateItem = (document: NotebookDocument, id: string, patch: ItemPa
   return { ...document, items: { ...document.items, [id]: next } };
 };
 
+/**
+ * Puts an item on a day page. Items in a space that does not show on Today (such as the ideas backlog)
+ * move into the notebook, otherwise the move would be invisible.
+ */
+export const scheduleItem = (document: NotebookDocument, id: string, day: string, context: CommandContext): NotebookDocument => {
+  const current = document.items[id];
+
+  if (!current || current.deleted) {
+    return document;
+  }
+
+  const space = current.spaceId ? document.spaces[current.spaceId] : undefined;
+  const leavesSpace = Boolean(space) && !(space && !space.deleted && space.showOnToday);
+  const patch: ItemPatch = { day, done: false, ...(leavesSpace ? { spaceId: null, columnId: null } : {}), ...(current.kind === 'idea' ? { kind: 'task' } : {}) };
+
+  return updateItem(document, id, patch, context);
+};
+
 export const toggleItemDone = (document: NotebookDocument, id: string, context: CommandContext): NotebookDocument => {
   const current = document.items[id];
 
@@ -151,6 +169,7 @@ export const addPerson = (document: NotebookDocument, name: string, context: Com
     name: name.trim(),
     now: '',
     nowUpdatedAt: null,
+    blocked: false,
     notes: '',
     order: nextOrder(Object.values(document.people)),
   };
@@ -158,7 +177,7 @@ export const addPerson = (document: NotebookDocument, name: string, context: Com
   return { document: { ...document, people: { ...document.people, [person.id]: person } }, person };
 };
 
-export type PersonPatch = Partial<Pick<Person, 'name' | 'now' | 'notes' | 'order'>>;
+export type PersonPatch = Partial<Pick<Person, 'name' | 'now' | 'notes' | 'order' | 'blocked'>>;
 
 export const updatePerson = (document: NotebookDocument, id: string, patch: PersonPatch, context: CommandContext): NotebookDocument => {
   const current = document.people[id];
