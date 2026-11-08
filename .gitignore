@@ -1,0 +1,17 @@
+node_modules
+dist
+coverage
+.turbo
+*.tsbuildinfo
+.DS_Store
+.pnpm-store
+
+# Harness-local generated skill adapters
+.claude/skills/
+.gemini/skills/
+
+# Secrets / local env (keep *.example tracked)
+.env
+.env.local
+apps/*/.env
+apps/*/.env.local
