@@ -71,10 +71,13 @@ export type CalendarGateway = {
   remove: (eventId: string, calendarId?: string) => Promise<void>;
 };
 
-export type StarredEmail = {
+export type InboxEmail = {
   id: string;
   subject: string;
   from: string;
+  /** Epoch milliseconds when Gmail received it, or null when Gmail did not say. */
+  receivedAt: number | null;
+  unread: boolean;
   link: string;
 };
 
@@ -87,7 +90,8 @@ export type AuthPort = {
 };
 
 export type MailGateway = {
-  listStarred: (limit: number) => Promise<StarredEmail[]>;
+  /** New, important inbox mail, newest first. */
+  listImportant: (limit: number) => Promise<InboxEmail[]>;
 };
 
 export class OfflineError extends Error {

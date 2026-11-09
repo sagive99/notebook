@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { boardColumnSchema, itemKindSchema, itemSchema, notebookDocumentSchema, personSchema, prioritySchema, settingsSchema, spaceColorSchema, spaceFieldsSchema, spaceLayoutSchema, spaceSchema, todayBlockIdSchema, todayBlockSchema } from './schemas';
+import type { boardColumnSchema, dismissedEmailSchema, itemKindSchema, itemSchema, notebookDocumentSchema, personSchema, prioritySchema, settingsSchema, spaceColorSchema, spaceFieldsSchema, spaceLayoutSchema, spaceSchema, todayBlockIdSchema, todayBlockSchema } from './schemas';
 
 export type Item = z.infer<typeof itemSchema>;
 export type ItemKind = z.infer<typeof itemKindSchema>;
@@ -13,6 +13,7 @@ export type BoardColumn = z.infer<typeof boardColumnSchema>;
 export type TodayBlockId = z.infer<typeof todayBlockIdSchema>;
 export type TodayBlock = z.infer<typeof todayBlockSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
+export type DismissedEmail = z.infer<typeof dismissedEmailSchema>;
 export type NotebookDocument = z.infer<typeof notebookDocumentSchema>;
 
 /** A calendar date in the user's local time zone, formatted YYYY-MM-DD. */

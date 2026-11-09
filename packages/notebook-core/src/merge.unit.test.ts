@@ -51,6 +51,16 @@ describe('schema evolution', () => {
 
     expect(parsed.ok && Object.values(parsed.document.people)[0]?.blocked).toBe(false);
   });
+
+  it('reads v1 settings written before collapsed blocks and dismissed emails existed', () => {
+    const context = testContext();
+    const document = JSON.parse(JSON.stringify(createDocument(context))) as { settings: Record<string, unknown> };
+    delete document.settings.collapsedBlocks;
+    delete document.settings.dismissedEmails;
+    const parsed = parseDocument(document);
+
+    expect(parsed.ok && [parsed.document.settings.collapsedBlocks, parsed.document.settings.dismissedEmails]).toEqual([[], []]);
+  });
 });
 
 describe('parseDocument', () => {

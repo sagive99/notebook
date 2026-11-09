@@ -1,11 +1,12 @@
-import { addItem, blockedCount, openSpaceItems, scheduleItem, spaceItems, waitingCount, withoutWork } from '@notebook/core';
+import { addItem, blockedCount, dismissEmail, openSpaceItems, restoreEmail, scheduleItem, setTodayBlockCollapsed, spaceItems, waitingCount, withoutWork } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { useState } from 'preact/hooks';
-import { useNotebook, useServices, useStarredEmails } from '../../state/hooks';
+import type { InboxEmail } from '../../ports';
+import { useImportantEmails, useNotebook, useServices } from '../../state/hooks';
 import { ItemRow } from '../components/ItemRow';
 import { Card, Empty } from '../components/primitives';
-import { SPACE_COLORS } from '../format';
-import { ChevronRightIcon, ExternalIcon, MailIcon, PeopleIcon } from '../icons';
+import { receivedLabel, SPACE_COLORS } from '../format';
+import { ChevronDownIcon, ChevronRightIcon, CloseIcon, ExternalIcon, MailIcon, PeopleIcon } from '../icons';
 import { href } from '../router';
 
 export const TeamBlock = () => {
@@ -28,9 +29,12 @@ export const TeamBlock = () => {
 export const GmailBlock = ({ today }: { today: IsoDate }) => {
   const services = useServices();
   const { document, run } = useNotebook();
-  const { state, granted, reload } = useStarredEmails(true);
+  const { state, granted, reload } = useImportantEmails(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastDismissed, setLastDismissed] = useState<InboxEmail | null>(null);
   const converted = new Set(Object.values(document.items).filter((item) => !item.deleted && item.sourceEmailId).map((item) => item.sourceEmailId));
+  const dismissed = new Set(document.settings.dismissedEmails.map((entry) => entry.id));
+  const collapsed = document.settings.collapsedBlocks.includes('gmail-starred');
 
   const allow = async () => {
     setError(null);
@@ -42,26 +46,58 @@ export const GmailBlock = ({ today }: { today: IsoDate }) => {
     }
   };
 
-  const emails = state.kind === 'ready' ? state.data.filter((email) => !converted.has(email.id)) : [];
+  const dismiss = (email: InboxEmail) => {
+    run((current, context) => dismissEmail(current, email.id, context));
+    setLastDismissed(email);
+  };
+
+  const undo = (email: InboxEmail) => {
+    run((current, context) => restoreEmail(current, email.id, context));
+    setLastDismissed(null);
+  };
+
+  const emails = state.kind === 'ready' ? state.data.filter((email) => !converted.has(email.id) && !dismissed.has(email.id)) : [];
+  const unread = emails.filter((email) => email.unread).length;
+  const summary = state.kind !== 'ready' || emails.length === 0 ? null : unread > 0 ? `${emails.length} · ${unread} unread` : String(emails.length);
 
   return (
     <Card>
-      <div class="card__head"><h2 class="card__title">Starred in Gmail</h2><MailIcon size={16} /></div>
-      {!services.mail ? <Empty>Gmail needs the Google setup first.</Empty> : null}
-      {services.mail && !granted ? (
-        <div class="card__foot"><span class="card__meta">{error ?? 'Allow read-only Gmail access to turn starred emails into tasks.'}</span><button type="button" class="soft-button" onClick={allow}>Allow</button></div>
-      ) : null}
-      {state.kind === 'error' ? <p class="inline-error" role="alert">{state.message} <button type="button" class="link-button" onClick={reload}>Retry</button></p> : null}
-      {state.kind === 'ready' && emails.length === 0 ? <Empty>No starred emails waiting.</Empty> : null}
-      <ul class="mail-list">
-        {emails.map((email) => (
-          <li key={email.id} class="mail">
-            <span class="mail__body"><span class="mail__subject" dir="auto">{email.subject}</span><span class="mail__from" dir="auto">{email.from}</span></span>
-            <a class="icon-button" href={email.link} target="_blank" rel="noopener noreferrer" aria-label={`Open "${email.subject}" in Gmail`}><ExternalIcon size={16} /></a>
-            <button type="button" class="soft-button" onClick={() => run((current, context) => addItem(current, { kind: 'task', text: email.subject, day: today, sourceEmailId: email.id }, context).document)}>→ Task</button>
-          </li>
-        ))}
-      </ul>
+      <div class="card__head">
+        <h2 class="card__title">
+          <button type="button" class="card__toggle" aria-expanded={!collapsed} onClick={() => run((current, context) => setTodayBlockCollapsed(current, 'gmail-starred', !collapsed, context))}>
+            Important in Gmail
+            {summary ? <span class="card__count">{summary}</span> : null}
+            <span class={collapsed ? 'card__chevron card__chevron--closed' : 'card__chevron'}><ChevronDownIcon size={16} /></span>
+          </button>
+        </h2>
+        <MailIcon size={16} />
+      </div>
+      {collapsed ? null : (
+        <>
+          {!services.mail ? <Empty>Gmail needs the Google setup first.</Empty> : null}
+          {services.mail && !granted ? (
+            <div class="card__foot"><span class="card__meta">{error ?? 'Allow read-only Gmail access to see new important emails and turn them into tasks.'}</span><button type="button" class="soft-button" onClick={allow}>Allow</button></div>
+          ) : null}
+          {state.kind === 'error' ? <p class="inline-error" role="alert">{state.message} <button type="button" class="link-button" onClick={reload}>Retry</button></p> : null}
+          {state.kind === 'ready' && emails.length === 0 ? <Empty>No new important emails this week.</Empty> : null}
+          <ul class="mail-list">
+            {emails.map((email) => (
+              <li key={email.id} class={email.unread ? 'mail mail--unread' : 'mail'}>
+                <span class="mail__body">
+                  <span class="mail__subject" dir="auto">{email.unread ? <span class="mail__dot" aria-label="Unread" role="img" /> : null}{email.subject}</span>
+                  <span class="mail__from"><span dir="auto">{email.from}</span>{email.receivedAt !== null ? ` · ${receivedLabel(email.receivedAt, today)}` : ''}</span>
+                </span>
+                <a class="icon-button" href={email.link} target="_blank" rel="noopener noreferrer" aria-label={`Open "${email.subject}" in Gmail`}><ExternalIcon size={16} /></a>
+                <button type="button" class="soft-button" onClick={() => run((current, context) => addItem(current, { kind: 'task', text: email.subject, day: today, sourceEmailId: email.id }, context).document)}>→ Task</button>
+                <button type="button" class="icon-button" aria-label={`Dismiss "${email.subject}"`} onClick={() => dismiss(email)}><CloseIcon size={14} /></button>
+              </li>
+            ))}
+          </ul>
+          {lastDismissed && dismissed.has(lastDismissed.id) ? (
+            <div class="card__foot" role="status"><span class="card__meta mail__undo-text" dir="auto">Dismissed “{lastDismissed.subject}”</span><button type="button" class="link-button" onClick={() => undo(lastDismissed)}>Undo</button></div>
+          ) : null}
+        </>
+      )}
     </Card>
   );
 };

@@ -15,6 +15,7 @@ export const SearchIcon = (props: IconProps) => <Svg {...props}><circle cx="11" 
 export const PlusIcon = (props: IconProps) => <Svg {...props} strokeWidth={2}><path d="M12 5v14M5 12h14" /></Svg>;
 export const SlidersIcon = (props: IconProps) => <Svg {...props}><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></Svg>;
 export const ChevronLeftIcon = (props: IconProps) => <Svg {...props} strokeWidth={2}><path d="M15 6l-6 6 6 6" /></Svg>;
+export const ChevronDownIcon = (props: IconProps) => <Svg {...props} strokeWidth={2}><path d="M6 9l6 6 6-6" /></Svg>;
 export const ChevronRightIcon = (props: IconProps) => <Svg {...props} strokeWidth={2}><path d="M9 6l6 6-6 6" /></Svg>;
 export const CheckIcon = (props: IconProps) => <Svg {...props} strokeWidth={3}><path d="M5 12l5 5 9-10" /></Svg>;
 export const BellIcon = (props: IconProps) => <Svg {...props}><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" /><path d="M10 20a2 2 0 0 0 4 0" /></Svg>;

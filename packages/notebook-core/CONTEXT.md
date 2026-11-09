@@ -8,7 +8,7 @@ The domain model of the notebook, shared by every device and app version.
 | --- | --- |
 | `schemas.ts` | Zod schemas for the stored document; the authoritative contract. |
 | `types.ts` | Types inferred from the schemas, plus `CommandContext`. |
-| `document.ts` | `createDocument` and pure commands for items (incl. `setItemOngoing`, `placeItemBefore`, `scheduleItem`), people, spaces, settings. |
+| `document.ts` | `createDocument` and pure commands for items (incl. `setItemOngoing`, `placeItemBefore`, `scheduleItem`), people, spaces, settings (incl. `setTodayBlockCollapsed`, `dismissEmail`, `restoreEmail`). |
 | `selectors.ts` | Day pages with carry-over (ongoing first), space items, per-person ongoing/up-next lists, Today blocks. |
 | `search.ts` | Grouped search, quick filters, and match highlighting parts. |
 | `board.ts` | Board column rules. |
@@ -27,4 +27,6 @@ The domain model of the notebook, shared by every device and app version.
 - Work is derived, never stored per item: `isWorkItem` (person link or work space) and `isWorkSpace` (`Space.work`, null = People layout). `dayPage(..., { hideWork })`, `withoutWork`, `isWorkEvent`, and `visibleTodayBlocks` apply the Today Work switch.
 - Merge tie-break on equal timestamps: tombstone, then fewer null fields (restores fields an older version dropped), then content order.
 - Finishing an ongoing task keeps `ongoingSince`, so Undo returns it to ongoing; `isOngoing` means set and not done.
+- `Settings.collapsedBlocks` and `Settings.dismissedEmails` were added after v1 with defaults; an older app version drops them when it saves settings (accepted: blocks reopen, dismissed emails come back). `dismissEmail` forgets dismissals older than 14 days, since the Gmail block lists only the last 7 days.
+- The Today block id `gmail-starred` is kept for stored compatibility; the block shows new important mail.
 - A new document contains two starter spaces, "Team" (people layout) and "Ideas backlog" (list), referenced from settings.

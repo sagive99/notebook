@@ -90,6 +90,7 @@ export const spaceSchema = z.object({
   order: z.number().finite().default(0),
 });
 
+/** `gmail-starred` is a stored id kept for compatibility; the block now shows new important mail ("Important in Gmail"). */
 export const todayBlockIdSchema = z.union([
   z.enum(['schedule', 'notebook', 'team-waiting', 'gmail-starred', 'backlog-pick']),
   z.string().regex(/^space:[\w-]{1,64}$/u),
@@ -98,6 +99,11 @@ export const todayBlockIdSchema = z.union([
 export const todayBlockSchema = z.object({
   id: todayBlockIdSchema,
   enabled: z.boolean(),
+});
+
+export const dismissedEmailSchema = z.object({
+  id: z.string().min(1).max(256),
+  dismissedAt: timestampSchema,
 });
 
 export const settingsSchema = z.object({
@@ -112,6 +118,17 @@ export const settingsSchema = z.object({
    * app version that drops the field falls back to the original behaviour rather than to a wrong value.
    */
   calendarForReminders: z.boolean().nullable().default(null),
+  /**
+   * Today blocks folded down to their header. Added after v1, hence the default. An older app version drops it when it
+   * saves settings; accepted: the blocks open again.
+   */
+  collapsedBlocks: z.array(todayBlockIdSchema).max(40).default([]),
+  /**
+   * Gmail messages hidden from the Important in Gmail block. Pruned after `DISMISSED_EMAIL_TTL_DAYS`, when the block
+   * no longer lists them anyway. Added after v1, hence the default; an older app version drops it when it saves
+   * settings, and dismissed emails come back until dismissed again.
+   */
+  dismissedEmails: z.array(dismissedEmailSchema).max(500).default([]),
 });
 
 export const DOCUMENT_VERSION = 1;

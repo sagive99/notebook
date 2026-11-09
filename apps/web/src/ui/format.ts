@@ -1,9 +1,10 @@
-import { addDays, fromIsoDate } from '@notebook/core';
+import { addDays, fromIsoDate, toIsoDate } from '@notebook/core';
 import type { IsoDate, SpaceColor } from '@notebook/core';
 
 const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'long' });
 const shortWeekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
 const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long' });
+const clock = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
 
 export const formatWeekday = (day: IsoDate): string => weekday.format(fromIsoDate(day));
 export const formatDayMonth = (day: IsoDate): string => dayMonth.format(fromIsoDate(day));
@@ -25,6 +26,14 @@ export const relativeDay = (day: IsoDate, today: IsoDate): string => {
   }
 
   return `${shortWeekday.format(fromIsoDate(day))} ${dayNumber(day)}`;
+};
+
+/** When an email arrived: the time for today's mail, otherwise "Yesterday" or a short weekday with date. */
+export const receivedLabel = (receivedAt: number, today: IsoDate): string => {
+  const date = new Date(receivedAt);
+  const day = toIsoDate(date);
+
+  return day === today ? clock.format(date) : relativeDay(day, today);
 };
 
 export const SPACE_COLORS: Record<SpaceColor, { bg: string; fg: string; swatch: string }> = {
