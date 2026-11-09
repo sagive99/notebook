@@ -137,7 +137,6 @@ export const reminderHandoff = (itemId: string, item: Item | undefined): string 
 /** A test reminder two minutes from now, for checking the Shortcut after setup. Not recorded. */
 export const testReminderUrl = (now: Date): string =>
   shortcutUrl({ action: 'add', tag: 'notebook:test', title: 'Notebook test reminder', due: localStamp(new Date(now.getTime() + 2 * 60_000)) });
-};
 
 /** Opens the Shortcut. Must run inside the tap that saved, or iOS may block the app switch. */
 export const openShortcut = (url: string | null): void => {
