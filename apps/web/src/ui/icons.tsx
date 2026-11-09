@@ -25,3 +25,8 @@ export const ArrowUpIcon = (props: IconProps) => <Svg {...props} strokeWidth={2}
 export const ArrowDownIcon = (props: IconProps) => <Svg {...props} strokeWidth={2}><path d="M12 5v14M6 13l6 6 6-6" /></Svg>;
 export const MoreIcon = (props: IconProps) => <Svg {...props} strokeWidth={2.4}><path d="M6 12h.01M12 12h.01M18 12h.01" /></Svg>;
 export const ExternalIcon = (props: IconProps) => <Svg {...props}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></Svg>;
+export const PlayIcon = ({ size = 12 }: IconProps) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5l11 7-11 7z" /></svg>;
+export const PauseIcon = ({ size = 12 }: IconProps) => <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>;
+export const GripIcon = (props: IconProps) => <Svg {...props} strokeWidth={2.4}><path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" /></Svg>;
+export const ClockIcon = (props: IconProps) => <Svg {...props}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></Svg>;
+export const CloseIcon = (props: IconProps) => <Svg {...props} strokeWidth={2.4}><path d="M6 6l12 12M18 6L6 18" /></Svg>;

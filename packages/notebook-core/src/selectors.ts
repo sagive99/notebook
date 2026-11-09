@@ -5,7 +5,14 @@ const live = <T extends { deleted: boolean }>(values: Record<string, T>): T[] =>
 
 const byOrder = <T extends { order: number }>(left: T, right: T): number => left.order - right.order;
 
+/** True while a task is being worked on (an ongoing task that was finished is no longer ongoing). */
+export const isOngoing = (item: Item): boolean => item.ongoingSince !== null && !item.done;
+
 const byTimeThenOrder = (left: Item, right: Item): number => {
+  if (isOngoing(left) !== isOngoing(right)) {
+    return isOngoing(left) ? -1 : 1;
+  }
+
   if (left.time && right.time) {
     return left.time.localeCompare(right.time) || left.order - right.order;
   }
@@ -40,10 +47,13 @@ export type DayPage = {
 };
 
 export const dayPage = (document: NotebookDocument, day: IsoDate, today: IsoDate): DayPage => {
-  const candidates = liveItems(document).filter((item) => item.day !== null && visibleOnDayPages(document, item));
-  const onDay = candidates.filter((item) => item.day === day);
+  const visible = liveItems(document).filter((item) => visibleOnDayPages(document, item));
+  const candidates = visible.filter((item) => item.day !== null);
+  // On today's page, ongoing tasks from any day (or none) join the open list, so what's being worked on is always first.
+  const ongoingElsewhere = day === today ? visible.filter((item) => isOngoing(item) && item.day !== today) : [];
+  const onDay = [...candidates.filter((item) => item.day === day), ...ongoingElsewhere];
   const carried = day === today && document.settings.carryOver
-    ? candidates.filter((item) => item.kind === 'task' && !item.done && item.day !== null && compareIsoDates(item.day, today) < 0).sort((left, right) => compareIsoDates(left.day ?? '', right.day ?? '') || left.order - right.order)
+    ? candidates.filter((item) => item.kind === 'task' && !item.done && !isOngoing(item) && item.day !== null && compareIsoDates(item.day, today) < 0).sort((left, right) => compareIsoDates(left.day ?? '', right.day ?? '') || left.order - right.order)
     : [];
 
   return {
@@ -55,25 +65,29 @@ export const dayPage = (document: NotebookDocument, day: IsoDate, today: IsoDate
 
 export const spaceItems = (document: NotebookDocument, spaceId: string): Item[] => liveItems(document).filter((item) => item.spaceId === spaceId).sort(byOrder);
 
-export type PersonSummary = {
+export type PersonTasks = {
   person: Person;
-  /** Open tasks linked to the person: things you are waiting on or owe them. */
-  open: Item[];
-  /** Days since their "now" line was last updated, or null when never set. */
-  daysSinceUpdate: number | null;
+  /** Tasks being worked on, oldest first. */
+  ongoing: Item[];
+  /** The person's other open tasks, in their manual order. */
+  next: Item[];
 };
 
-const MS_PER_DAY = 86_400_000;
+/**
+ * A person's tasks for the People board. Finished tasks are left out, except those in `keepDone`
+ * (finished during the current visit), which stay in place so a tick doesn't make the row jump away.
+ */
+export const personTasks = (document: NotebookDocument, person: Person, keepDone: ReadonlySet<string> = new Set()): PersonTasks => {
+  const tasks = liveItems(document).filter((item) => item.kind === 'task' && item.personId === person.id && (!item.done || keepDone.has(item.id)));
 
-export const teamSummary = (document: NotebookDocument, now: Date): PersonSummary[] => {
-  const items = liveItems(document).filter((item) => item.kind === 'task' && !item.done && item.personId !== null);
-
-  return livePeople(document).map((person) => ({
+  return {
     person,
-    open: items.filter((item) => item.personId === person.id).sort(byOrder),
-    daysSinceUpdate: person.nowUpdatedAt === null ? null : Math.max(0, Math.floor((now.getTime() - new Date(person.nowUpdatedAt).getTime()) / MS_PER_DAY)),
-  }));
+    ongoing: tasks.filter((item) => item.ongoingSince !== null).sort((left, right) => (left.ongoingSince ?? '').localeCompare(right.ongoingSince ?? '') || left.order - right.order),
+    next: tasks.filter((item) => item.ongoingSince === null).sort(byOrder),
+  };
 };
+
+export const teamTasks = (document: NotebookDocument, keepDone: ReadonlySet<string> = new Set()): PersonTasks[] => livePeople(document).map((person) => personTasks(document, person, keepDone));
 
 export const blockedCount = (document: NotebookDocument): number => livePeople(document).filter((person) => person.blocked).length;
 
@@ -87,24 +101,4 @@ export const todayBlocks = (document: NotebookDocument): TodayBlock[] => {
   const extra = spaces.filter((space) => !listed.has(`space:${space.id}`)).map((space): TodayBlock => ({ id: `space:${space.id}`, enabled: false }));
 
   return [...configured, ...extra];
-};
-
-export type SearchHit = { kind: 'item'; item: Item } | { kind: 'person'; person: Person } | { kind: 'space'; space: Space };
-
-export const search = (document: NotebookDocument, query: string, limit = 50): SearchHit[] => {
-  const needle = query.trim().toLocaleLowerCase();
-
-  if (needle.length === 0) {
-    return [];
-  }
-
-  const matches = (value: string): boolean => value.toLocaleLowerCase().includes(needle);
-  const spaces = liveSpaces(document).filter((space) => matches(space.name)).map((space): SearchHit => ({ kind: 'space', space }));
-  const people = livePeople(document).filter((person) => matches(person.name) || matches(person.now) || matches(person.notes)).map((person): SearchHit => ({ kind: 'person', person }));
-  const items = liveItems(document)
-    .filter((item) => matches(item.text) || item.tags.some(matches))
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-    .map((item): SearchHit => ({ kind: 'item', item }));
-
-  return [...spaces, ...people, ...items].slice(0, limit);
 };

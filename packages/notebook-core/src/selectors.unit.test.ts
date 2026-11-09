@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addItem, addPerson, addSpace, createDocument, deleteSpace, toggleItemDone, updatePerson, updateSettings } from './document';
-import { dayPage, search, teamSummary, todayBlocks } from './selectors';
+import { addItem, addSpace, createDocument, deleteSpace, setItemOngoing, toggleItemDone, updateSettings } from './document';
+import { dayPage, todayBlocks } from './selectors';
 import { testContext } from './test-support';
 
 describe('dayPage', () => {
@@ -17,6 +17,10 @@ describe('dayPage', () => {
     expect(page.carried.map((item) => item.text)).toEqual(['old task']);
     expect(page.open.map((item) => item.text)).toEqual(['today task', 'untimed']);
     expect(dayPage(untimed.document, '2026-11-10', '2026-11-09').carried).toEqual([]);
+
+    const ongoing = setItemOngoing(untimed.document, untimed.item.id, true, context);
+
+    expect(dayPage(ongoing, '2026-11-09', '2026-11-09').open.map((item) => item.text)).toEqual(['untimed', 'today task']);
   });
 
   it('respects the carry-over setting and finished tasks', () => {
@@ -41,20 +45,6 @@ describe('dayPage', () => {
   });
 });
 
-describe('teamSummary', () => {
-  it('lists open person-linked tasks and staleness', () => {
-    const context = testContext('2026-11-05T09:00:00');
-    const withPerson = addPerson(createDocument(context), 'Omer', context);
-    const updated = updatePerson(withPerson.document, withPerson.person.id, { now: 'Deploying map layers' }, context);
-    const task = addItem(updated, { kind: 'task', text: 'deploy status', personId: withPerson.person.id }, context);
-
-    const [summary] = teamSummary(task.document, new Date('2026-11-09T10:00:00'));
-
-    expect(summary?.open.map((item) => item.text)).toEqual(['deploy status']);
-    expect(summary?.daysSinceUpdate).toBe(4);
-  });
-});
-
 describe('todayBlocks', () => {
   it('appends spaces as disabled blocks and drops blocks of deleted spaces', () => {
     const context = testContext();
@@ -64,18 +54,5 @@ describe('todayBlocks', () => {
 
     expect(todayBlocks(pinned).filter((block) => block.id.startsWith('space:'))).toHaveLength(2);
     expect(todayBlocks(deleteSpace(pinned, spaceId, context)).some((block) => block.id === `space:${spaceId}`)).toBe(false);
-  });
-});
-
-describe('search', () => {
-  it('finds items, people and spaces case-insensitively', () => {
-    const context = testContext();
-    const person = addPerson(createDocument(context), 'Noa', context);
-    const item = addItem(person.document, { kind: 'idea', text: 'Learn about QUIC', tags: ['someday'] }, context);
-
-    expect(search(item.document, 'quic').map((hit) => hit.kind)).toEqual(['item']);
-    expect(search(item.document, 'noa').map((hit) => hit.kind)).toEqual(['person']);
-    expect(search(item.document, 'backlog').map((hit) => hit.kind)).toEqual(['space']);
-    expect(search(item.document, '   ')).toEqual([]);
   });
 });

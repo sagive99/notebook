@@ -6,3 +6,5 @@ export * from './capture';
 export * from './selectors';
 export * from './merge';
 export * from './board';
+export * from './search';
+export * from './people';

@@ -27,18 +27,6 @@ export const relativeDay = (day: IsoDate, today: IsoDate): string => {
   return `${shortWeekday.format(fromIsoDate(day))} ${dayNumber(day)}`;
 };
 
-export const daysAgo = (days: number | null): string => {
-  if (days === null) {
-    return 'No update yet';
-  }
-
-  if (days === 0) {
-    return 'Updated today';
-  }
-
-  return days === 1 ? 'Updated yesterday' : `Last update ${days} days ago`;
-};
-
 export const SPACE_COLORS: Record<SpaceColor, { bg: string; fg: string; swatch: string }> = {
   teal: { bg: '#E6F4F1', fg: '#0F6B5E', swatch: '#0F7B6C' },
   blue: { bg: '#EEF1FD', fg: '#2F4FD0', swatch: '#2F4FD0' },
@@ -49,3 +37,6 @@ export const SPACE_COLORS: Record<SpaceColor, { bg: string; fg: string; swatch: 
 };
 
 export const initials = (name: string): string => name.trim().split(/\s+/u).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || '?';
+
+/** Avatar colours, picked by a person's position in the roster. */
+export const AVATAR_TONES: ReadonlyArray<{ bg: string; fg: string }> = [{ bg: '#EEF1FD', fg: '#2F4FD0' }, { bg: '#E6F4F1', fg: '#0F6B5E' }, { bg: '#F1EEF8', fg: '#5B3FA0' }, { bg: '#FDF1E3', fg: '#9A5B13' }, { bg: '#FCEBF1', fg: '#A3204F' }];

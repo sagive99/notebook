@@ -20,6 +20,11 @@ export const itemSchema = z.object({
   text: z.string().max(10_000),
   done: z.boolean().default(false),
   doneAt: timestampSchema.nullable().default(null),
+  /**
+   * Set while a task is being worked on; kept when done so Undo returns it to ongoing. Added after v1, hence the default.
+   * An older app version drops it when it saves the item; that is accepted: the task falls back to "up next".
+   */
+  ongoingSince: timestampSchema.nullable().default(null),
   day: isoDateSchema.nullable().default(null),
   time: clockTimeSchema.nullable().default(null),
   remind: z.boolean().default(false),
@@ -37,7 +42,12 @@ export const itemSchema = z.object({
 export const personSchema = z.object({
   ...entityFields,
   name: z.string().min(1).max(120),
+  /**
+   * Deprecated: the free-text "now" line, replaced by ongoing tasks. Kept so a save from this version doesn't erase text
+   * that older versions still show and edit; the People board offers to turn it into an ongoing task.
+   */
   now: z.string().max(500).default(''),
+  /** Deprecated with `now`. */
   nowUpdatedAt: timestampSchema.nullable().default(null),
   /** Blocked on something outside their control; added after v1 shipped, hence the default. */
   blocked: z.boolean().default(false),
