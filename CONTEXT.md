@@ -9,7 +9,8 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 - **Today page:** one day at a time: calendar events, the notebook (tasks and notes for the day), and blocks pinned from Spaces. The user chooses and orders the blocks.
 - **Quick capture:** one text box, available everywhere. Understands `@person`, `#tag`, day words ("tomorrow", "מחר") and times ("14:30").
 - **Spaces:** user-created sections with a layout (list, board, people, notes) and chosen item fields. The ideas backlog and the team board are ordinary Spaces.
-- **People:** one team roster shared by every People-layout space: a "now" line (what they are working on), a blocked flag, linked open tasks, and running 1:1 notes.
+- **People:** one team roster shared by every People-layout space: each person's tasks split into ongoing and up next, a blocked flag, and running 1:1 notes. Tasks ticked on the People screen stay visible (✓) until the user leaves it.
+- **Search:** grouped results with highlighted matches, type filters, quick filters (ongoing, waiting on people, due today, carried over, reminders, done this week), and recent searches kept on the device.
 - **Calendar sync:** two-way link with Google Calendar, which the iPhone Calendar mirrors.
 - **Backup and multi-device sync:** the whole notebook is stored in the user's Google Drive app-data folder and on each device.
 
@@ -26,9 +27,10 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 | Carried over | An unfinished task from an earlier day, shown on today's page until done or moved. |
 | Evening cutoff | The time (default 18:00) after which new captures default to tomorrow morning. |
 | Calendar + reminder | An item flag: the item has a Google Calendar event with a popup alert. |
+| Ongoing | A task being worked on now (`ongoingSince` set, not done). Shown first and highlighted on People and Today. |
+| Up next | A person's open tasks that are not ongoing, in manual order. |
 | Waiting on | Open tasks linked to a person. |
 | Blocked | A person flagged as stuck on something outside their control. |
-| Check in | A person whose "now" line has not been updated for 3+ days. |
 | Tombstone | A deleted entity kept with `deleted: true` so deletions survive merging. |
 
 ## Invariants

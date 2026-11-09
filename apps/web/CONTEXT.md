@@ -30,8 +30,8 @@ ports.ts  ◄── implemented by ── adapters/ (google/auth, drive-store, c
 | `#/today` (default) | Today: header, week strip, enabled blocks, capture bar |
 | `#/customize` | Block order and visibility, notebook rules, account and sync |
 | `#/spaces`, `#/space/<id>`, `#/space-settings/<id>`, `#/new-space` | Spaces grid, a space in its layout, space settings, creation |
-| `#/people` | People board (team) |
-| `#/search` | Search across items, people, spaces |
+| `#/people` | People board: ongoing and up-next tasks per person, ▶ and drag to set ongoing, ✓ kept until leaving |
+| `#/search` | Search: type filters, quick filters, people row, recent searches, grouped highlighted results |
 
 ## Invariants
 
