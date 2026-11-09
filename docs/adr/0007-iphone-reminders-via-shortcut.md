@@ -17,7 +17,7 @@ Sagiv wants items marked "Calendar + reminder" to appear in the iPhone Reminders
 An opt-in, device-local handoff to an iPhone Shortcut named "Notebook Reminder", which the user builds once:
 
 - When a save from the New or Edit sheet changes what an item's reminder should be (title, or day and time), the app opens `shortcuts://run-shortcut?name=Notebook%20Reminder&input=text&text=<json>` from that tap.
-- The payload is `{"action":"add","tag":"notebook:<itemId>","title":…,"due":"YYYY-MM-DD HH:MM"}` or `{"action":"remove","tag":…}`. The Shortcut removes reminders whose notes contain the tag, then adds the new one with an alert at `due` and the tag in its notes.
+- The payload is `{"action":"add","tag":"notebook:<itemId>","title":…,"due":"YYYY-MM-DDTHH:MM:00+HH:MM"}` or `{"action":"remove","tag":…}`. The Shortcut removes reminders whose notes contain the tag, then adds the new one with an alert at `due` and the tag in its notes.
 - A day with no time gets an alert at 08:30.
 - What was last sent per item is kept in `localStorage` (`notebook.reminders.sent`), so unchanged saves don't open Shortcuts. The on/off switch is `notebook.reminders.shortcut`. Neither key syncs.
 - The handoff is one-way. The notebook never reads Reminders, and Google Calendar stays the synced record.
