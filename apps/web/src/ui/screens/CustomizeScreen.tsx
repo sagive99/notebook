@@ -12,7 +12,7 @@ const BLOCK_TEXT: Record<string, { name: string; sub: string }> = {
   schedule: { name: 'Schedule', sub: 'Google Calendar events for the day' },
   notebook: { name: 'Notebook', sub: 'The day’s tasks and notes' },
   'team-waiting': { name: 'Team · waiting on', sub: 'Open tasks linked to people' },
-  'gmail-starred': { name: 'Starred in Gmail', sub: 'Turn starred emails into tasks' },
+  'gmail-starred': { name: 'Important in Gmail', sub: 'New important emails, ready to become tasks' },
   'backlog-pick': { name: 'One idea from the backlog', sub: 'A gentle nudge from your ideas' },
 };
 

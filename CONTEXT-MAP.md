@@ -32,7 +32,7 @@ iPhone home screen (PWA, GitHub Pages)
         |                             ^                                       |
         +-- Schedule block --listDay--+---- reconcile moves/deletes ----------+
         |                                                                     |
-        +-- Gmail block --list starred (read-only)--> Gmail          iPhone Calendar (account sync)
+        +-- Gmail block --list important (read-only)--> Gmail        iPhone Calendar (account sync)
 
 Google Identity Services --access token (1h)--> GoogleAuth --> every Google adapter
 ```

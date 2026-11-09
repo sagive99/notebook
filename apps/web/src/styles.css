@@ -128,7 +128,9 @@ a { color: var(--accent); }
 .mail:first-child { border-top: none; }
 .mail__body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .mail__subject { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mail__from { font-size: 12px; color: var(--muted); }
+.mail__from { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail--unread .mail__subject { font-weight: 650; }
+.mail__dot { display: inline-block; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 .pick__text { margin: 0; font-size: 15px; line-height: 21px; }
 
 /* Capture bar and navigation */

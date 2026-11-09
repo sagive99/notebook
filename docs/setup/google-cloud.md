@@ -13,7 +13,7 @@ In **APIs & Services → Library**, search for each and press **Enable**:
 
 - Google Calendar API
 - Google Drive API
-- Gmail API (only used if you turn on the "Starred in Gmail" block)
+- Gmail API (only used if you turn on the "Important in Gmail" block)
 
 ## 3. Consent screen
 

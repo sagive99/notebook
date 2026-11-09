@@ -90,6 +90,7 @@ export const spaceSchema = z.object({
   order: z.number().finite().default(0),
 });
 
+/** `gmail-starred` is a stored id kept for compatibility; the block now shows new important mail ("Important in Gmail"). */
 export const todayBlockIdSchema = z.union([
   z.enum(['schedule', 'notebook', 'team-waiting', 'gmail-starred', 'backlog-pick']),
   z.string().regex(/^space:[\w-]{1,64}$/u),

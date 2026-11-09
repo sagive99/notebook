@@ -3,7 +3,7 @@ import type { IsoDate } from '@notebook/core';
 import { createContext } from 'preact';
 import { useCallback, useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { AuthRequiredError } from '../ports';
-import type { AuthState, CalendarEvent, CalendarInfo, StarredEmail } from '../ports';
+import type { AuthState, CalendarEvent, CalendarInfo, InboxEmail } from '../ports';
 import type { AppServices } from './app-services';
 import type { Command, StoreSnapshot } from './notebook-store';
 
@@ -157,11 +157,11 @@ export const useCalendarList = (granted: boolean) => {
   return useRemote(granted && calendar ? load : null, 'calendars');
 };
 
-export const useStarredEmails = (enabled: boolean) => {
+export const useImportantEmails = (enabled: boolean) => {
   const { mail, gmailGranted } = useServices();
   const authState = useAuthState();
   const granted = enabled && authState.status === 'signed-in' && gmailGranted();
-  const load = useCallback(async (): Promise<StarredEmail[]> => (mail ? mail.listStarred(8) : []), [mail]);
+  const load = useCallback(async (): Promise<InboxEmail[]> => (mail ? mail.listImportant(8) : []), [mail]);
 
-  return { ...useRemote(granted && mail ? load : null, 'starred'), granted };
+  return { ...useRemote(granted && mail ? load : null, 'important'), granted };
 };
