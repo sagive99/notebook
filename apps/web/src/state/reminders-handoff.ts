@@ -1,5 +1,4 @@
-import { compareIsoDates } from '@notebook/core';
-import type { IsoDate, Item, NotebookDocument } from '@notebook/core';
+import type { Item, NotebookDocument } from '@notebook/core';
 import { safeStorage } from '../platform/safe-storage';
 
 /**
@@ -32,6 +31,13 @@ export const reminderDue = (item: Pick<Item, 'day' | 'time'>): string | null => 
 
 export const shortcutUrl = (payload: ReminderPayload): string =>
   `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(JSON.stringify(payload))}`;
+
+/** Local "YYYY-MM-DD HH:MM", the same shape as a reminder's due, so the two compare as strings. */
+const localStamp = (at: Date): string => {
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+};
 
 type SentMap = Record<string, string>;
 
@@ -69,20 +75,21 @@ const signatureOf = (reminder: { title: string; due: string }): string => `${rem
 
 /**
  * Items whose Reminders copy is out of date on this phone: changed in Google Calendar or on another
- * device, or never sent. Only today and later count, so old reminders never nag.
+ * device, or never sent. Only reminders still ahead count, so past ones never nag.
  * Opening Shortcuts needs a tap, so the Today page offers these one at a time.
  */
-export const staleReminders = (document: Pick<NotebookDocument, 'items'>, today: IsoDate): string[] => {
+export const staleReminders = (document: Pick<NotebookDocument, 'items'>, now: Date): string[] => {
   if (!remindersEnabled()) {
     return [];
   }
 
   const sent = readSent();
+  const nowDue = localStamp(now);
   const stale = Object.values(document.items).filter((item) => {
     const next = wanted(item);
 
     if (next) {
-      return compareIsoDates(item.day ?? today, today) >= 0 && sent[item.id] !== signatureOf(next);
+      return next.due >= nowDue && sent[item.id] !== signatureOf(next);
     }
 
     return sent[item.id] !== undefined;
@@ -128,12 +135,8 @@ export const reminderHandoff = (itemId: string, item: Item | undefined): string 
 };
 
 /** A test reminder two minutes from now, for checking the Shortcut after setup. Not recorded. */
-export const testReminderUrl = (now: Date): string => {
-  const at = new Date(now.getTime() + 2 * 60_000);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  const due = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
-
-  return shortcutUrl({ action: 'add', tag: 'notebook:test', title: 'Notebook test reminder', due });
+export const testReminderUrl = (now: Date): string =>
+  shortcutUrl({ action: 'add', tag: 'notebook:test', title: 'Notebook test reminder', due: localStamp(new Date(now.getTime() + 2 * 60_000)) });
 };
 
 /** Opens the Shortcut. Must run inside the tap that saved, or iOS may block the app switch. */

@@ -13,10 +13,10 @@ import { href } from '../router';
 import { useSheets } from '../sheets/sheet-context';
 
 /** Offers to bring the iPhone Reminders app up to date after calendar-side or other-device changes (ADR 0007). */
-const RemindersBanner = ({ today }: { today: IsoDate }) => {
+const RemindersBanner = () => {
   const { document } = useNotebook();
   const [, setSent] = useState(0);
-  const stale = staleReminders(document, today);
+  const stale = staleReminders(document, new Date());
   const first = stale[0];
 
   if (first === undefined) {
@@ -81,7 +81,7 @@ export const TodayScreen = () => {
         {day !== today ? <button type="button" class="link-button back-to-today" onClick={() => setDay(today)}>Back to today</button> : null}
       </header>
       <SyncBanner />
-      <RemindersBanner today={today} />
+      <RemindersBanner />
       <div class="stack">
         {blocks.map((block) => {
           switch (block.id) {

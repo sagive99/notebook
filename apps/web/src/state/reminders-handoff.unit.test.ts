@@ -85,12 +85,13 @@ describe('stale reminders', () => {
       item({ id: 'new' }),
       item({ id: 'past', day: '2026-11-01' }),
       item({ id: 'done', done: true }),
-    ), '2026-11-09').sort()).toEqual(['moved', 'new', 'off']);
+      item({ id: 'earlier', time: '08:00' }),
+    ), new Date(2026, 10, 9, 21, 0)).sort()).toEqual(['moved', 'new', 'off']);
   });
 
   it('is empty while the handoff is off', () => {
     setRemindersEnabled(false);
 
-    expect(staleReminders(doc(item({ id: 'new' })), '2026-11-09')).toEqual([]);
+    expect(staleReminders(doc(item({ id: 'new' })), new Date(2026, 10, 9, 21, 0))).toEqual([]);
   });
 });
