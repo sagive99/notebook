@@ -55,7 +55,7 @@ export const useRoute = (): Route => {
   useEffect(() => {
     const onChange = () => {
       setRoute(parseRoute(window.location.hash));
-      window.scrollTo(0, 0);
+      document.querySelector('.app-main')?.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', onChange);
 

@@ -133,7 +133,7 @@ export const SpaceScreen = ({ id }: { id: string }) => {
   const peopleActions = <>{settingsLink}<button type="button" class="round-button round-button--dark" aria-label="Add person" onClick={() => sheets.open({ kind: 'person', id: null })}><PlusIcon size={20} /></button></>;
 
   return (
-    <div class={`screen ${space.layout === 'list' ? 'screen--with-capture' : ''}`}>
+    <div class="screen">
       <ScreenHeader back={{ label: 'Spaces', href: href({ name: 'spaces' }) }} title={space.name} eyebrow={space.layout === 'people' ? 'People space' : undefined} actions={space.layout === 'people' ? peopleActions : settingsLink} />
       {space.layout === 'list' ? <ListLayout space={space} items={items} today={today} /> : null}
       {space.layout === 'board' ? <BoardLayout space={space} items={items} today={today} /> : null}
