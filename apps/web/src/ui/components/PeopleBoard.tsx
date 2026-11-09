@@ -1,8 +1,8 @@
-import { placeItemBefore, setItemOngoing, teamTasks, toggleItemDone } from '@notebook/core';
-import type { Item, PersonTasks } from '@notebook/core';
-import { useState } from 'preact/hooks';
+import { moveTaskOnPeopleBoard, resolveLegacyNow, setItemOngoing, teamTasks, toIsoDate, toggleItemDone } from '@notebook/core';
+import type { IsoDate, Item, PersonTasks } from '@notebook/core';
+import { useMemo, useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
-import { initials, relativeDay } from '../format';
+import { AVATAR_TONES, initials, relativeDay } from '../format';
 import { CheckIcon, GripIcon, PauseIcon, PlayIcon } from '../icons';
 import { useSheets } from '../sheets/sheet-context';
 import { Empty } from './primitives';
@@ -11,15 +11,13 @@ import type { DropTarget } from './useTaskDrag';
 
 type Filter = 'everyone' | 'ongoing' | 'blocked';
 
-const AVATAR_TONES = [{ bg: '#EEF1FD', fg: '#2F4FD0' }, { bg: '#E6F4F1', fg: '#0F6B5E' }, { bg: '#F1EEF8', fg: '#5B3FA0' }, { bg: '#FDF1E3', fg: '#9A5B13' }, { bg: '#FCEBF1', fg: '#A3204F' }];
-
-const since = (iso: string | null, today: string): string => {
+const since = (iso: string | null, today: IsoDate): string => {
   if (iso === null) {
     return '';
   }
 
   const date = new Date(iso);
-  const day = relativeDay(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, today);
+  const day = relativeDay(toIsoDate(date), today);
 
   return day === 'Today' ? `Ongoing since ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : `Ongoing since ${day === 'Yesterday' ? 'yesterday' : day}`;
 };
@@ -39,12 +37,12 @@ const summary = ({ ongoing, next }: PersonTasks): string => {
  * One card per person: ongoing tasks highlighted on top, then up next. Ticking a task shows ✓ and keeps it
  * in place until the user leaves this screen (the kept set lives in component state, so it resets on leave).
  */
-export const PeopleBoard = ({ today, spaceId }: { today: string; spaceId: string | null }) => {
+export const PeopleBoard = ({ today, spaceId }: { today: IsoDate; spaceId: string | null }) => {
   const { document, run } = useNotebook();
   const sheets = useSheets();
   const [filter, setFilter] = useState<Filter>('everyone');
   const [keepDone, setKeepDone] = useState<ReadonlySet<string>>(() => new Set());
-  const team = teamTasks(document, keepDone);
+  const team = useMemo(() => teamTasks(document, keepDone), [document, keepDone]);
   const ongoingPeople = team.filter((entry) => entry.ongoing.some((item) => !item.done));
   const blockedPeople = team.filter((entry) => entry.person.blocked);
   const shown = filter === 'ongoing' ? ongoingPeople : filter === 'blocked' ? blockedPeople : team;
@@ -59,34 +57,20 @@ export const PeopleBoard = ({ today, spaceId }: { today: string; spaceId: string
 
   const setOngoing = (item: Item, ongoing: boolean) => run((current, context) => setItemOngoing(current, item.id, ongoing, context));
 
-  const { drag, handleProps } = useTaskDrag((item: Item, target: DropTarget) => {
-    const entry = team.find((candidate) => candidate.person.id === item.personId);
-
-    if (!entry) {
-      return;
-    }
-
-    if (target.zone === 'ongoing') {
-      run((current, context) => setItemOngoing(current, item.id, true, context));
-
-      return;
-    }
-
-    run((current, context) => placeItemBefore(setItemOngoing(current, item.id, false, context), item.id, target.beforeId, entry.next, context));
-  });
+  const { drag, handleProps } = useTaskDrag((item: Item, target: DropTarget) => run((current, context) => moveTaskOnPeopleBoard(current, item.id, target, context)));
 
   const row = (item: Item, personId: string, ongoingGroup: boolean) => {
-    const dragging = drag?.item.id === item.id;
+    const dragging = drag?.itemId === item.id;
     const done = item.done;
 
     return (
-      <div key={item.id} data-task-id={item.id} class={`task ${ongoingGroup && !done ? 'task--ongoing' : ''} ${done ? 'task--done' : ''} ${dragging ? 'task--dragging' : ''}`} style={dragging ? { transform: `translateY(${drag.dy}px)` } : undefined}>
+      <div key={item.id} data-task-id={item.id} class={`task ${ongoingGroup && !done ? 'task--ongoing' : ''} ${done ? 'task--done' : ''} ${dragging ? 'task--dragging' : ''}`}>
         <button type="button" class={`task__check ${done ? 'task__check--done' : ''}`} role="checkbox" aria-checked={done} aria-label={done ? `Mark "${item.text}" as not done` : `Mark "${item.text}" as done`} onClick={() => toggleDone(item)}>
           {done ? <CheckIcon size={13} /> : null}
         </button>
         <button type="button" class="task__body" onClick={() => sheets.open({ kind: 'item', id: item.id })}>
           <span class="task__text" dir="auto">{item.text}</span>
-          <span class="task__meta">{done ? 'Done · leaves the list when you leave People' : ongoingGroup ? since(item.ongoingSince, today) : item.day ? relativeDay(item.day, today) : ''}</span>
+          <span class="task__meta">{done ? 'Done · leaves the list when you leave this screen' : ongoingGroup ? since(item.ongoingSince, today) : item.day ? relativeDay(item.day, today) : ''}</span>
         </button>
         {done ? (
           <button type="button" class="link-button" onClick={() => toggleDone(item)}>Undo</button>
@@ -127,9 +111,18 @@ export const PeopleBoard = ({ today, spaceId }: { today: string; spaceId: string
               </button>
               {person.blocked ? <span class="tag tag--blocked">Blocked</span> : null}
             </div>
+            {person.now.trim() !== '' ? (
+              <div class="legacy-now">
+                <span class="legacy-now__text" dir="auto"><b>Old “Now” note:</b> {person.now}</span>
+                <span class="legacy-now__actions">
+                  <button type="button" class="soft-button" onClick={() => run((current, context) => resolveLegacyNow(current, person.id, true, context))}>Make it an ongoing task</button>
+                  <button type="button" class="link-button" onClick={() => run((current, context) => resolveLegacyNow(current, person.id, false, context))}>Dismiss</button>
+                </span>
+              </div>
+            ) : null}
             <div class={`task-zone task-zone--ongoing ${overOngoing ? 'task-zone--over' : ''}`} data-drop-zone="ongoing" data-person-id={person.id}>
               {ongoing.map((item) => row(item, person.id, true))}
-              {ongoing.length === 0 ? <p class="task-zone__hint">{overOngoing ? 'Drop to set ongoing' : 'Drag a task here, or tap ▶ on one, to mark it ongoing'}</p> : null}
+              {ongoing.every((item) => item.done) ? <p class="task-zone__hint">{overOngoing ? 'Drop to set ongoing' : 'Drag a task here, or tap ▶ on one, to mark it ongoing'}</p> : null}
             </div>
             <div class={`task-zone ${overNext ? 'task-zone--over-next' : ''}`} data-drop-zone="next" data-person-id={person.id}>
               {next.map((item) => row(item, person.id, false))}
@@ -144,4 +137,3 @@ export const PeopleBoard = ({ today, spaceId }: { today: string; spaceId: string
     </div>
   );
 };
-

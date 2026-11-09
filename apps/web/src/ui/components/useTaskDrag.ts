@@ -1,25 +1,28 @@
-import type { Item } from '@notebook/core';
+import type { Item, PeopleBoardTarget } from '@notebook/core';
 import { useRef, useState } from 'preact/hooks';
 
-export type DropZone = 'ongoing' | 'next';
+export type DropTarget = PeopleBoardTarget;
 
-export type DropTarget = { zone: DropZone; beforeId: string | null };
-
-type DragState = {
+type DragSession = {
   item: Item;
   personId: string;
   pointerId: number;
   startY: number;
   dy: number;
+  row: HTMLElement | null;
   target: DropTarget | null;
+  frame: number | null;
 };
+
+/** What the board renders from: which task is lifted and where it would land. Changes only when the target does. */
+export type DragView = { itemId: string; personId: string; target: DropTarget | null };
 
 /** Finds the drop zone and insertion point under the pointer, within one person's card. */
 const targetAt = (x: number, y: number, personId: string, draggedId: string): DropTarget | null => {
-  const elements = document.elementsFromPoint(x, y);
-  const zone = elements.find((element): element is HTMLElement => element instanceof HTMLElement && element.dataset.dropZone !== undefined && element.dataset.personId === personId);
+  const zone = document.elementsFromPoint(x, y).find((element): element is HTMLElement => element instanceof HTMLElement && element.dataset.dropZone !== undefined && element.dataset.personId === personId);
+  const kind = zone?.dataset.dropZone;
 
-  if (!zone || (zone.dataset.dropZone !== 'ongoing' && zone.dataset.dropZone !== 'next')) {
+  if (!zone || (kind !== 'ongoing' && kind !== 'next')) {
     return null;
   }
 
@@ -30,20 +33,40 @@ const targetAt = (x: number, y: number, personId: string, draggedId: string): Dr
     return y < box.top + box.height / 2;
   });
 
-  return { zone: zone.dataset.dropZone, beforeId: before?.dataset.taskId ?? null };
+  return { zone: kind, beforeId: before?.dataset.taskId ?? null };
 };
 
+const sameTarget = (left: DropTarget | null, right: DropTarget | null): boolean => left?.zone === right?.zone && left?.beforeId === right?.beforeId;
+
 /**
- * Pointer-based drag for task rows (works with touch, mouse, and pen). Start it from a handle with
- * `touch-action: none`; `onDrop` receives where the task was released inside the same person's card.
+ * Pointer-based drag for task rows (touch, mouse, pen), started from a handle with `touch-action: none`.
+ * The lifted row follows the finger by writing its transform directly once per animation frame; React state
+ * changes only when the drop target changes, so the board doesn't re-render on every pointer move.
  */
 export const useTaskDrag = (onDrop: (item: Item, target: DropTarget) => void) => {
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const latest = useRef<DragState | null>(null);
+  const [view, setView] = useState<DragView | null>(null);
+  const session = useRef<DragSession | null>(null);
 
-  const update = (next: DragState | null) => {
-    latest.current = next;
-    setDrag(next);
+  const finish = (drop: boolean) => {
+    const current = session.current;
+    session.current = null;
+    setView(null);
+
+    if (!current) {
+      return;
+    }
+
+    if (current.frame !== null) {
+      cancelAnimationFrame(current.frame);
+    }
+
+    if (current.row) {
+      current.row.style.transform = '';
+    }
+
+    if (drop && current.target && Math.abs(current.dy) > 4) {
+      onDrop(current.item, current.target);
+    }
   };
 
   const handleProps = (item: Item, personId: string) => ({
@@ -54,32 +77,45 @@ export const useTaskDrag = (onDrop: (item: Item, target: DropTarget) => void) =>
 
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
-      update({ item, personId, pointerId: event.pointerId, startY: event.clientY, dy: 0, target: null });
+      session.current = { item, personId, pointerId: event.pointerId, startY: event.clientY, dy: 0, row: event.currentTarget.closest<HTMLElement>('[data-task-id]'), target: null, frame: null };
+      setView({ itemId: item.id, personId, target: null });
     },
     onPointerMove: (event: PointerEvent) => {
-      const current = latest.current;
+      const current = session.current;
 
       if (!current || current.pointerId !== event.pointerId) {
         return;
       }
 
-      update({ ...current, dy: event.clientY - current.startY, target: targetAt(event.clientX, event.clientY, current.personId, current.item.id) });
+      current.dy = event.clientY - current.startY;
+      const { clientX, clientY } = event;
+
+      if (current.frame !== null) {
+        return;
+      }
+
+      current.frame = requestAnimationFrame(() => {
+        current.frame = null;
+
+        if (current.row) {
+          current.row.style.transform = `translateY(${current.dy}px)`;
+        }
+
+        const target = targetAt(clientX, clientY, current.personId, current.item.id);
+
+        if (!sameTarget(target, current.target)) {
+          current.target = target;
+          setView({ itemId: current.item.id, personId: current.personId, target });
+        }
+      });
     },
     onPointerUp: (event: PointerEvent) => {
-      const current = latest.current;
-
-      if (!current || current.pointerId !== event.pointerId) {
-        return;
-      }
-
-      update(null);
-
-      if (current.target && Math.abs(current.dy) > 4) {
-        onDrop(current.item, current.target);
+      if (session.current?.pointerId === event.pointerId) {
+        finish(true);
       }
     },
-    onPointerCancel: () => update(null),
+    onPointerCancel: () => finish(false),
   });
 
-  return { drag, handleProps };
+  return { drag: view, handleProps };
 };
