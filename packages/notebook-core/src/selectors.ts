@@ -1,5 +1,5 @@
 import { compareIsoDates } from './dates';
-import type { IsoDate, Item, NotebookDocument, Person, Space, TodayBlock } from './types';
+import type { IsoDate, Item, NotebookDocument, Person, Settings, Space, TodayBlock } from './types';
 
 const live = <T extends { deleted: boolean }>(values: Record<string, T>): T[] => Object.values(values).filter((value) => !value.deleted);
 
@@ -139,3 +139,6 @@ export const visibleTodayBlocks = (document: NotebookDocument, hideWork: boolean
 
   return todayBlocks(document).filter((block) => block.enabled && !(hideWork && isWorkBlock(block)));
 };
+
+/** Reminder items get a Google Calendar event unless the user turned that off (Settings.calendarForReminders). */
+export const remindersUseCalendar = (settings: Pick<Settings, 'calendarForReminders'>): boolean => settings.calendarForReminders !== false;

@@ -59,6 +59,7 @@ export const createDocument = (context: CommandContext): NotebookDocument => {
       eveningCutoff: '18:00',
       backlogSpaceId: backlog.id,
       teamSpaceId: team.id,
+      calendarForReminders: null,
     },
   };
 };

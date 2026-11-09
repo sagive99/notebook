@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addItem, addPerson, addSpace, createDocument, deleteSpace, setItemOngoing, toggleItemDone, updateSettings, updateSpace } from './document';
 import { parseDocument } from './merge';
 import { mergeDocuments } from './merge';
-import { dayPage, isWorkEvent, isWorkSpace, liveItems, todayBlocks, visibleTodayBlocks, withoutWork } from './selectors';
+import { dayPage, isWorkEvent, isWorkSpace, liveItems, remindersUseCalendar, todayBlocks, visibleTodayBlocks, withoutWork } from './selectors';
 import { testContext } from './test-support';
 
 describe('dayPage', () => {
@@ -151,5 +151,16 @@ describe('work switch', () => {
       expect(merged.spaces[teamId]?.work).toBe(false);
       expect(merged.spaces[backlogId]?.work).toBe(true);
     });
+  });
+});
+
+describe('reminders and Google Calendar', () => {
+  it('uses the calendar by default, including documents written before the setting existed', () => {
+    const raw = JSON.parse(JSON.stringify(createDocument(testContext()))) as { settings: Record<string, unknown> };
+    delete raw.settings.calendarForReminders;
+    const parsed = parseDocument(raw);
+
+    expect(parsed.ok && remindersUseCalendar(parsed.document.settings)).toBe(true);
+    expect(remindersUseCalendar({ calendarForReminders: false })).toBe(false);
   });
 });

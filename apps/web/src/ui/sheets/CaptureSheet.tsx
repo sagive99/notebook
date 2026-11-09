@@ -1,4 +1,4 @@
-import { addDays, addItem, defaultCaptureTarget, liveSpaces, livePeople, parseCapture, toIsoDate } from '@notebook/core';
+import { addDays, addItem, defaultCaptureTarget, liveSpaces, livePeople, parseCapture, remindersUseCalendar, toIsoDate } from '@notebook/core';
 import type { IsoDate, ItemKind } from '@notebook/core';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useNotebook, useServices } from '../../state/hooks';
@@ -43,6 +43,7 @@ export const CaptureSheet = ({ preset = {}, onClose }: { preset?: CapturePreset;
   const effectivePerson = parsed.personId ?? personId;
   const effectiveDay = destination.kind === 'day' ? parsed.day ?? destination.day : parsed.day;
   const effectiveTime = parsed.time ?? (remind ? remindTime : null);
+  const remindLabel = remindersUseCalendar(document.settings) ? 'Calendar + reminder' : 'Reminder';
 
   useEffect(() => {
     textRef.current?.focus();
@@ -124,14 +125,14 @@ export const CaptureSheet = ({ preset = {}, onClose }: { preset?: CapturePreset;
           </label>
           <div class="settings-row">
             <BellIcon size={20} />
-            <span class="settings-row__label">Calendar + reminder</span>
+            <span class="settings-row__label">{remindLabel}</span>
             {remind && parsed.time === null ? <input class="time-input" type="time" aria-label="Reminder time" value={remindTime} onInput={(event) => setRemindTime(event.currentTarget.value || '08:30')} /> : null}
             {remind && parsed.time !== null ? <span class="card__meta">{parsed.time}</span> : null}
-            <Toggle label="Calendar + reminder" checked={remind} onChange={setRemind} />
+            <Toggle label={remindLabel} checked={remind} onChange={setRemind} />
           </div>
         </div>
         {remind && effectiveDay === null ? <p class="hint">Pick a day for the reminder, or write one (“tomorrow 9:00”).</p> : null}
-        {remind && !calendar ? <p class="hint">Saved now; it will reach your calendar once Google is set up.</p> : null}
+        {remind && !calendar && remindersUseCalendar(document.settings) ? <p class="hint">Saved now; it will reach your calendar once Google is set up.</p> : null}
         <p class="hint">Type <b>@name</b> for a person, <b>#tag</b> for a tag, and words like “tomorrow” or “14:30” to set the day and time. After {document.settings.eveningCutoff}, new items go to tomorrow morning by default.</p>
       </form>
     </Sheet>

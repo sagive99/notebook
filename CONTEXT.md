@@ -27,7 +27,7 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 | Pinned / Show on Today | A space whose dated items appear on day pages, or whose block is enabled on Today. |
 | Carried over | An unfinished task from an earlier day, shown on today's page until done or moved. |
 | Evening cutoff | The time (default 18:00) after which new captures default to tomorrow morning. |
-| Calendar + reminder | An item flag: the item has a Google Calendar event with a popup alert, and, when the iPhone Reminders handoff is on, a reminder in the Reminders app. |
+| Calendar + reminder | An item flag: the item has a Google Calendar event with a popup alert (unless `Settings.calendarForReminders` is off, when the toggle reads just "Reminder"), and, when the iPhone Reminders handoff is on, a reminder in the Reminders app. |
 | Ongoing | A task being worked on now (`ongoingSince` set, not done). Shown first and highlighted on People, and on today's page whatever its own day. |
 | Up next | A person's open tasks that are not ongoing, in manual order. Item `order` is one number per item shared by every list (Today, its space, People), so reordering in one place moves it everywhere. |
 | Waiting on | Open tasks linked to a person. |

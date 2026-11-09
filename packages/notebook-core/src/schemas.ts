@@ -107,6 +107,11 @@ export const settingsSchema = z.object({
   eveningCutoff: clockTimeSchema.default('18:00'),
   backlogSpaceId: z.string().max(64).nullable().default(null),
   teamSpaceId: z.string().max(64).nullable().default(null),
+  /**
+   * Whether "reminder" items also get a Google Calendar event. null means the default (yes), so an older
+   * app version that drops the field falls back to the original behaviour rather than to a wrong value.
+   */
+  calendarForReminders: z.boolean().nullable().default(null),
 });
 
 export const DOCUMENT_VERSION = 1;
