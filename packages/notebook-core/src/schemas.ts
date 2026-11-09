@@ -80,6 +80,11 @@ export const spaceSchema = z.object({
   fields: spaceFieldsSchema,
   columns: z.array(boardColumnSchema).max(12).default([]),
   showOnToday: z.boolean().default(false),
+  /**
+   * Whether the space is work. Null means "not chosen yet": People-layout spaces then count as work (see `isWorkSpace`).
+   * Added after v1, hence the default; an older app version drops it on save and the space falls back to that rule.
+   */
+  work: z.boolean().nullable().default(null),
   inCapture: z.boolean().default(true),
   order: z.number().finite().default(0),
 });

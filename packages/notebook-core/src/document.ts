@@ -27,6 +27,7 @@ export const createDocument = (context: CommandContext): NotebookDocument => {
     fields: { dueDate: false, person: false, priority: false, link: false, tags: true },
     columns: [],
     showOnToday: false,
+    work: null,
     inCapture: true,
     order: 1,
   };
@@ -41,6 +42,7 @@ export const createDocument = (context: CommandContext): NotebookDocument => {
     fields: { dueDate: true, person: true, priority: false, link: false, tags: false },
     columns: [],
     showOnToday: true,
+    work: null,
     inCapture: true,
     order: 0,
   };
@@ -255,6 +257,7 @@ export type NewSpaceInput = {
   layout: SpaceLayout;
   fields: SpaceFields;
   showOnToday: boolean;
+  work?: boolean | null;
   inCapture: boolean;
 };
 
@@ -272,6 +275,7 @@ export const addSpace = (document: NotebookDocument, input: NewSpaceInput, conte
     fields: input.fields,
     columns,
     showOnToday: input.showOnToday,
+    work: input.work ?? null,
     inCapture: input.inCapture,
     order: nextOrder(Object.values(document.spaces)),
   };
@@ -279,7 +283,7 @@ export const addSpace = (document: NotebookDocument, input: NewSpaceInput, conte
   return { document: { ...document, spaces: { ...document.spaces, [space.id]: space } }, space };
 };
 
-export type SpacePatch = Partial<Pick<Space, 'name' | 'color' | 'fields' | 'columns' | 'showOnToday' | 'inCapture' | 'order'>>;
+export type SpacePatch = Partial<Pick<Space, 'name' | 'color' | 'fields' | 'columns' | 'showOnToday' | 'work' | 'inCapture' | 'order'>>;
 
 export const updateSpace = (document: NotebookDocument, id: string, patch: SpacePatch, context: CommandContext): NotebookDocument => {
   const current = document.spaces[id];

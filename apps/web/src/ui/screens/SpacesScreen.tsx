@@ -1,4 +1,4 @@
-import { liveSpaces, spaceItems } from '@notebook/core';
+import { isWorkSpace, liveSpaces, spaceItems } from '@notebook/core';
 import type { NotebookDocument, Space } from '@notebook/core';
 import { useNotebook } from '../../state/hooks';
 import { ScreenHeader } from '../components/chrome';
@@ -42,7 +42,7 @@ export const SpacesScreen = () => {
               {space.showOnToday || pinned.has(`space:${space.id}`) ? <span class="tag tag--time">On Today</span> : null}
             </span>
             <span class="space-tile__name" dir="auto">{space.name}</span>
-            <span class="space-tile__meta">{summary(document, space)}</span>
+            <span class="space-tile__meta">{summary(document, space)}{isWorkSpace(space) ? ' · Work' : ''}</span>
           </a>
         ))}
         <a class="space-tile space-tile--new" href={href({ name: 'new-space' })}>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { addItem, addSpace, createDocument, deleteSpace, setItemOngoing, toggleItemDone, updateSettings } from './document';
-import { dayPage, todayBlocks } from './selectors';
+import { addItem, addPerson, addSpace, createDocument, deleteSpace, setItemOngoing, toggleItemDone, updateSettings, updateSpace } from './document';
+import { parseDocument } from './merge';
+import { dayPage, isWorkSpace, todayBlocks, visibleTodayBlocks } from './selectors';
 import { testContext } from './test-support';
 
 describe('dayPage', () => {
@@ -54,5 +55,68 @@ describe('todayBlocks', () => {
 
     expect(todayBlocks(pinned).filter((block) => block.id.startsWith('space:'))).toHaveLength(2);
     expect(todayBlocks(deleteSpace(pinned, spaceId, context)).some((block) => block.id === `space:${spaceId}`)).toBe(false);
+  });
+});
+
+describe('work switch', () => {
+  const fixture = () => {
+    const context = testContext();
+    const base = createDocument(context);
+    const teamId = base.settings.teamSpaceId ?? '';
+    const backlogId = base.settings.backlogSpaceId ?? '';
+    const person = addPerson(base, 'Dana', context);
+    const loose = addItem(person.document, { kind: 'task', text: 'Buy milk', day: '2026-11-09' }, context);
+    const forDana = addItem(loose.document, { kind: 'task', text: 'CR for Dana', day: '2026-11-09', personId: person.person.id }, context);
+    const inTeam = addItem(forDana.document, { kind: 'task', text: 'Team retro prep', day: '2026-11-09', spaceId: teamId }, context);
+    const undated = addItem(inTeam.document, { kind: 'task', text: 'Ongoing for Dana', personId: person.person.id }, context);
+    const ongoing = setItemOngoing(undated.document, undated.item.id, true, context);
+
+    return { context, document: ongoing, teamId, backlogId };
+  };
+  const texts = (items: ReadonlyArray<{ text: string }>) => items.map((item) => item.text).sort();
+
+  it('hides items linked to people or in work spaces, and keeps loose notebook items', () => {
+    const { document } = fixture();
+
+    expect(texts(dayPage(document, '2026-11-09', '2026-11-09').open)).toEqual(['Buy milk', 'CR for Dana', 'Ongoing for Dana', 'Team retro prep']);
+    expect(texts(dayPage(document, '2026-11-09', '2026-11-09', { hideWork: true }).open)).toEqual(['Buy milk']);
+  });
+
+  it('treats People-layout spaces as work until the user chooses, and respects the choice', () => {
+    const { context, document, teamId, backlogId } = fixture();
+
+    const team = document.spaces[teamId];
+    const backlog = document.spaces[backlogId];
+
+    expect(team && isWorkSpace(team)).toBe(true);
+    expect(backlog && isWorkSpace(backlog)).toBe(false);
+
+    const teamPersonal = updateSpace(document, teamId, { work: false }, context);
+
+    expect(texts(dayPage(teamPersonal, '2026-11-09', '2026-11-09', { hideWork: true }).open)).toEqual(['Buy milk', 'Team retro prep']);
+  });
+
+  it('drops work blocks from Today while Work is off', () => {
+    const { context, document, backlogId } = fixture();
+    const pinned = updateSettings(document, { todayBlocks: [...document.settings.todayBlocks.map((block) => ({ ...block, enabled: true })), { id: `space:${backlogId}`, enabled: true }] }, context);
+    const ids = (hideWork: boolean, source = pinned) => visibleTodayBlocks(source, hideWork).map((block) => block.id);
+
+    expect(ids(false)).toContain('team-waiting');
+    expect(ids(true)).toEqual(['schedule', 'notebook', 'gmail-starred', 'backlog-pick', `space:${backlogId}`]);
+
+    const workBacklog = updateSpace(pinned, backlogId, { work: true }, context);
+
+    expect(ids(true, workBacklog)).toEqual(['schedule', 'notebook', 'gmail-starred']);
+  });
+
+  it('reads spaces stored before the work flag existed', () => {
+    const { document, teamId } = fixture();
+    const raw = JSON.parse(JSON.stringify(document)) as { spaces: Record<string, Record<string, unknown>> };
+    Object.values(raw.spaces).forEach((space) => {
+      delete space.work;
+    });
+    const parsed = parseDocument(raw);
+
+    expect(parsed.ok && parsed.document.spaces[teamId]?.work).toBeNull();
   });
 });

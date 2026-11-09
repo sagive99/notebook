@@ -1,13 +1,13 @@
-import { addDays, todayBlocks, weekOf } from '@notebook/core';
+import { addDays, visibleTodayBlocks, weekOf } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { useEffect, useState } from 'preact/hooks';
-import { useNotebook, useToday } from '../../state/hooks';
+import { useNotebook, useServices, useToday } from '../../state/hooks';
 import { BacklogPickBlock, GmailBlock, SpaceBlock, TeamBlock } from '../blocks/SmallBlocks';
 import { NotebookBlock } from '../blocks/NotebookBlock';
 import { ScheduleBlock } from '../blocks/ScheduleBlock';
 import { CaptureBar, SyncBanner, SyncDot } from '../components/chrome';
 import { dayNumber, formatDayMonth, formatWeekday, relativeDay, weekdayLetter } from '../format';
-import { ChevronLeftIcon, ChevronRightIcon, SlidersIcon } from '../icons';
+import { BriefcaseIcon, ChevronLeftIcon, ChevronRightIcon, SlidersIcon } from '../icons';
 import { href } from '../router';
 import { useSheets } from '../sheets/sheet-context';
 
@@ -16,13 +16,20 @@ export const TodayScreen = () => {
   const [day, setDay] = useState<IsoDate>(today);
   const { document } = useNotebook();
   const sheets = useSheets();
+  const services = useServices();
+  const [workHidden, setWorkHidden] = useState(services.workHidden);
   const week = weekOf(day);
+
+  const toggleWork = () => {
+    services.setWorkHidden(!workHidden);
+    setWorkHidden(!workHidden);
+  };
 
   useEffect(() => {
     setDay(today);
   }, [today]);
 
-  const blocks = todayBlocks(document).filter((block) => block.enabled);
+  const blocks = visibleTodayBlocks(document, workHidden);
 
   return (
     <div class="screen">
@@ -32,7 +39,10 @@ export const TodayScreen = () => {
             <span class="screen-header__eyebrow">{day === today ? formatWeekday(day) : `${formatWeekday(day)} · ${relativeDay(day, today)}`} <SyncDot /></span>
             <h1 class="screen-header__title">{formatDayMonth(day)}</h1>
           </div>
-          <a class="round-button" href={href({ name: 'customize' })} aria-label="Customize Today"><SlidersIcon size={20} /></a>
+          <div class="screen-header__actions">
+            <button type="button" role="switch" aria-checked={!workHidden} aria-label="Show work" class={`work-switch ${workHidden ? '' : 'work-switch--on'}`} onClick={toggleWork}><BriefcaseIcon size={16} />{workHidden ? 'Work off' : 'Work on'}</button>
+            <a class="round-button" href={href({ name: 'customize' })} aria-label="Customize Today"><SlidersIcon size={20} /></a>
+          </div>
         </div>
         <div class="week-strip">
           <button type="button" class="week-strip__shift" aria-label="Previous week" onClick={() => setDay(addDays(day, -7))}><ChevronLeftIcon size={16} /></button>
@@ -51,9 +61,9 @@ export const TodayScreen = () => {
         {blocks.map((block) => {
           switch (block.id) {
             case 'schedule':
-              return <ScheduleBlock key={block.id} day={day} />;
+              return <ScheduleBlock key={block.id} day={day} hideWork={workHidden} />;
             case 'notebook':
-              return <NotebookBlock key={block.id} day={day} today={today} />;
+              return <NotebookBlock key={block.id} day={day} today={today} hideWork={workHidden} />;
             case 'team-waiting':
               return <TeamBlock key={block.id} />;
             case 'gmail-starred':
@@ -65,6 +75,7 @@ export const TodayScreen = () => {
           }
         })}
         {blocks.length === 0 ? <p class="empty">Every block is hidden. Turn some on in Customize.</p> : null}
+        {workHidden ? <p class="hint work-note">Work is switched off: team tasks, work spaces and work calendars are hidden here. Nothing is deleted.</p> : null}
       </div>
       <CaptureBar onOpen={() => sheets.open({ kind: 'capture', preset: day === today ? {} : { day } })} />
     </div>

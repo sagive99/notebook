@@ -30,3 +30,4 @@ export const PauseIcon = ({ size = 12 }: IconProps) => <svg width={size} height=
 export const GripIcon = (props: IconProps) => <Svg {...props} strokeWidth={2.4}><path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" /></Svg>;
 export const ClockIcon = (props: IconProps) => <Svg {...props}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></Svg>;
 export const CloseIcon = (props: IconProps) => <Svg {...props} strokeWidth={2.4}><path d="M6 6l12 12M18 6L6 18" /></Svg>;
+export const BriefcaseIcon = (props: IconProps) => <Svg {...props}><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 13h18" /></Svg>;

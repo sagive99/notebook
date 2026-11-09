@@ -6,11 +6,11 @@ import { ItemRow } from '../components/ItemRow';
 import { Card, Empty } from '../components/primitives';
 import { useSheets } from '../sheets/sheet-context';
 
-export const NotebookBlock = ({ day, today }: { day: IsoDate; today: IsoDate }) => {
+export const NotebookBlock = ({ day, today, hideWork = false }: { day: IsoDate; today: IsoDate; hideWork?: boolean }) => {
   const { document } = useNotebook();
   const sheets = useSheets();
   const [showDone, setShowDone] = useState(false);
-  const page = dayPage(document, day, today);
+  const page = dayPage(document, day, today, { hideWork });
   const openCount = page.open.filter((item) => item.kind === 'task').length + page.carried.length;
 
   return (
