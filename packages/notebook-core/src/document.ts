@@ -1,5 +1,5 @@
 import { DOCUMENT_VERSION } from './schemas';
-import type { BoardColumn, CommandContext, Item, ItemKind, NotebookDocument, Person, Settings, Space, SpaceColor, SpaceFields, SpaceLayout, TodayBlock } from './types';
+import type { BoardColumn, CommandContext, Item, ItemKind, NotebookDocument, Person, Settings, Space, SpaceColor, SpaceFields, SpaceLayout, TodayBlock, TodayBlockId } from './types';
 
 export const DEFAULT_TODAY_BLOCKS: TodayBlock[] = [
   { id: 'schedule', enabled: true },
@@ -59,6 +59,8 @@ export const createDocument = (context: CommandContext): NotebookDocument => {
       eveningCutoff: '18:00',
       backlogSpaceId: backlog.id,
       teamSpaceId: team.id,
+      collapsedBlocks: [],
+      dismissedEmails: [],
     },
   };
 };
@@ -322,3 +324,24 @@ export const updateSettings = (document: NotebookDocument, patch: SettingsPatch,
   ...document,
   settings: { ...document.settings, ...patch, updatedAt: stamp(context) },
 });
+
+/** Folds a Today block down to its header, or opens it again. */
+export const setTodayBlockCollapsed = (document: NotebookDocument, id: TodayBlockId, collapsed: boolean, context: CommandContext): NotebookDocument => {
+  const others = document.settings.collapsedBlocks.filter((blockId) => blockId !== id);
+
+  return updateSettings(document, { collapsedBlocks: collapsed ? [...others, id] : others }, context);
+};
+
+/** Dismissals older than this are dropped: the Gmail block only lists the last 7 days of mail. */
+export const DISMISSED_EMAIL_TTL_DAYS = 14;
+
+/** Hides a Gmail message from the Important in Gmail block, and forgets dismissals too old to matter. */
+export const dismissEmail = (document: NotebookDocument, emailId: string, context: CommandContext): NotebookDocument => {
+  const cutoff = new Date(context.now.getTime() - DISMISSED_EMAIL_TTL_DAYS * 86_400_000).toISOString();
+  const kept = document.settings.dismissedEmails.filter((entry) => entry.id !== emailId && entry.dismissedAt >= cutoff);
+
+  return updateSettings(document, { dismissedEmails: [...kept, { id: emailId, dismissedAt: stamp(context) }].slice(-500) }, context);
+};
+
+/** Shows a dismissed Gmail message again (Undo). */
+export const restoreEmail = (document: NotebookDocument, emailId: string, context: CommandContext): NotebookDocument => updateSettings(document, { dismissedEmails: document.settings.dismissedEmails.filter((entry) => entry.id !== emailId) }, context);

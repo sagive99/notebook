@@ -101,6 +101,11 @@ export const todayBlockSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const dismissedEmailSchema = z.object({
+  id: z.string().min(1).max(256),
+  dismissedAt: timestampSchema,
+});
+
 export const settingsSchema = z.object({
   updatedAt: timestampSchema,
   todayBlocks: z.array(todayBlockSchema).max(40),
@@ -108,6 +113,17 @@ export const settingsSchema = z.object({
   eveningCutoff: clockTimeSchema.default('18:00'),
   backlogSpaceId: z.string().max(64).nullable().default(null),
   teamSpaceId: z.string().max(64).nullable().default(null),
+  /**
+   * Today blocks folded down to their header. Added after v1, hence the default. An older app version drops it when it
+   * saves settings; accepted: the blocks open again.
+   */
+  collapsedBlocks: z.array(todayBlockIdSchema).max(40).default([]),
+  /**
+   * Gmail messages hidden from the Important in Gmail block. Pruned after `DISMISSED_EMAIL_TTL_DAYS`, when the block
+   * no longer lists them anyway. Added after v1, hence the default; an older app version drops it when it saves
+   * settings, and dismissed emails come back until dismissed again.
+   */
+  dismissedEmails: z.array(dismissedEmailSchema).max(500).default([]),
 });
 
 export const DOCUMENT_VERSION = 1;
