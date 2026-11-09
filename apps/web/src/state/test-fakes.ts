@@ -1,6 +1,6 @@
 import type { NotebookDocument } from '@notebook/core';
 import { ConflictError } from '../ports';
-import type { CalendarEvent, CalendarGateway, CalendarInfo, LocalDocumentStore, NewCalendarEvent, RemoteDocumentStore, StoredDocument } from '../ports';
+import type { CalendarChanges, CalendarEvent, CalendarGateway, CalendarInfo, LocalDocumentStore, NewCalendarEvent, RemoteDocumentStore, StoredDocument } from '../ports';
 
 export const memoryLocalStore = (): LocalDocumentStore & { saved: NotebookDocument | null } => {
   const state = { saved: null as NotebookDocument | null };
@@ -83,6 +83,20 @@ export class FakeCalendar implements CalendarGateway {
 
   async get(eventId: string): Promise<CalendarEvent | null> {
     return this.events.get(eventId) ?? null;
+  }
+
+  async listChanged(since: string): Promise<CalendarChanges> {
+    this.calls.push(`listChanged:${since}`);
+
+    return { events: [...this.events.values()].filter((event) => event.updated >= since), deletedIds: [...this.deletedIds] };
+  }
+
+  deletedIds: string[] = [];
+
+  /** Simulates deleting the event in Google or iPhone Calendar. */
+  deleteExternally(eventId: string): void {
+    this.events.delete(eventId);
+    this.deletedIds.push(eventId);
   }
 
   /** Simulates an edit made in Google or iPhone Calendar. */

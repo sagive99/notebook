@@ -16,6 +16,7 @@ ports.ts  ◄── implemented by ── adapters/ (google/auth, drive-store, c
 
 - `NotebookStore` applies `@notebook/core` commands, writes the device copy, and syncs with the remote store by merging ([ADR 0003](../../docs/adr/0003-drive-app-data-document-with-entity-merge.md)). Status values: `local-only`, `signed-out`, `needs-auth`, `pending`, `syncing`, `synced`, `offline`, `error`.
 - `CalendarSync` keeps "Calendar + reminder" items and their events linked both ways and queues work while offline ([ADR 0005](../../docs/adr/0005-google-calendar-as-calendar-hub.md)).
+- `reminders-handoff.ts` opens the "Notebook Reminder" Shortcut from the New and Edit sheets' save tap when an item's reminder changed; device-local and one-way ([ADR 0007](../../docs/adr/0007-iphone-reminders-via-shortcut.md)).
 - `GoogleAuth` owns the short-lived token ([ADR 0004](../../docs/adr/0004-browser-oauth-token-model.md)).
 
 ## Modes

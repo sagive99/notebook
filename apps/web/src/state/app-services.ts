@@ -59,6 +59,7 @@ export const createAppServices = (config: AppConfig): AppServices => {
       store.setRemote(remote, { kind: 'pending' });
       calendarSync.setGateway(calendar);
       void store.sync();
+      void calendarSync.flush().then(() => calendarSync.reconcileChanges()).catch(() => undefined);
 
       return;
     }
@@ -73,7 +74,7 @@ export const createAppServices = (config: AppConfig): AppServices => {
   const syncIfVisible = (): void => {
     if (document.visibilityState === 'visible' && auth?.state().status === 'signed-in') {
       void store.sync();
-      void calendarSync.flush();
+      void calendarSync.flush().then(() => calendarSync.reconcileChanges()).catch(() => undefined);
     }
   };
   const interval = setInterval(syncIfVisible, SYNC_INTERVAL_MS);

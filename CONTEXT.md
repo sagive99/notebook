@@ -12,6 +12,7 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 - **People:** one team roster shared by every People-layout space: each person's tasks split into ongoing and up next, a blocked flag, and running 1:1 notes. Tasks ticked on a People board stay visible (✓) until the user leaves that screen. A person's old free-text "now" note can be turned into an ongoing task.
 - **Search:** grouped results with highlighted matches, type filters, quick filters (ongoing, waiting on people, due today, carried over, reminders, done this week), and recent searches kept on the device.
 - **Calendar sync:** two-way link with Google Calendar, which the iPhone Calendar mirrors.
+- **iPhone Reminders handoff:** optional, one-way; reminder items are handed to a user-installed Shortcut ([ADR 0007](./docs/adr/0007-iphone-reminders-via-shortcut.md)).
 - **Backup and multi-device sync:** the whole notebook is stored in the user's Google Drive app-data folder and on each device.
 
 ## Language
@@ -26,7 +27,7 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 | Pinned / Show on Today | A space whose dated items appear on day pages, or whose block is enabled on Today. |
 | Carried over | An unfinished task from an earlier day, shown on today's page until done or moved. |
 | Evening cutoff | The time (default 18:00) after which new captures default to tomorrow morning. |
-| Calendar + reminder | An item flag: the item has a Google Calendar event with a popup alert. |
+| Calendar + reminder | An item flag: the item has a Google Calendar event with a popup alert, and, when the iPhone Reminders handoff is on, a reminder in the Reminders app. |
 | Ongoing | A task being worked on now (`ongoingSince` set, not done). Shown first and highlighted on People, and on today's page whatever its own day. |
 | Up next | A person's open tasks that are not ongoing, in manual order. Item `order` is one number per item shared by every list (Today, its space, People), so reordering in one place moves it everywhere. |
 | Waiting on | Open tasks linked to a person. |

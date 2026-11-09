@@ -6,6 +6,7 @@ import { ScreenHeader, SyncDot } from '../components/chrome';
 import { SectionLabel, Toggle } from '../components/primitives';
 import { ArrowDownIcon, ArrowUpIcon } from '../icons';
 import { href } from '../router';
+import { SHORTCUT_NAME, openShortcut, remindersEnabled, setRemindersEnabled, testReminderUrl } from '../../state/reminders-handoff';
 
 const BLOCK_TEXT: Record<string, { name: string; sub: string }> = {
   schedule: { name: 'Schedule', sub: 'Google Calendar events for the day' },
@@ -125,6 +126,48 @@ const CalendarsSection = () => {
   );
 };
 
+const RemindersSection = () => {
+  const [enabled, setEnabled] = useState(remindersEnabled);
+
+  return (
+    <div class="field">
+      <SectionLabel>iPhone Reminders</SectionLabel>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-row__label">Also add to the Reminders app<span class="settings-row__sub">Through the “{SHORTCUT_NAME}” shortcut</span></span>
+          <Toggle label="Also add to the Reminders app" checked={enabled} onChange={(on) => {
+            setRemindersEnabled(on);
+            setEnabled(on);
+          }} />
+        </div>
+        {enabled ? (
+          <div class="settings-row">
+            <span class="settings-row__label">Check the shortcut<span class="settings-row__sub">Adds a test reminder for 2 minutes from now</span></span>
+            <button type="button" class="pill-button pill-button--small" onClick={() => openShortcut(testReminderUrl(new Date()))}>Test</button>
+          </div>
+        ) : null}
+      </div>
+      <p class="hint">Items with <b>Calendar + reminder</b> are handed to the shortcut when you save them, so the Shortcuts app opens for a moment; tap “‹ Notebook” at the top left to come back. Checking a reminder off in Reminders doesn’t check it off here. Remembered on this phone.</p>
+      {enabled ? (
+        <details class="setup-steps">
+          <summary>Set up the shortcut (once)</summary>
+          <ol>
+            <li>Open <b>Shortcuts</b>, tap <b>+</b>, and name the shortcut <b>{SHORTCUT_NAME}</b> exactly.</li>
+            <li>Add <b>Get Dictionary from Input</b> (input: Shortcut Input).</li>
+            <li>Add <b>Get Dictionary Value</b> for key <b>tag</b>.</li>
+            <li>Add <b>Find Reminders</b>: filter <b>Notes contains</b> the Dictionary Value from step 3.</li>
+            <li>Add <b>If</b> Reminders <b>has any value</b>, and inside it <b>Remove Reminders</b> with them. This replaces the older copy when you edit an item.</li>
+            <li>Add <b>Get Dictionary Value</b> for key <b>action</b> from the Dictionary, then <b>If</b> it <b>is</b> <b>add</b>:</li>
+            <li>Inside the If: <b>Get Dictionary Value</b> for <b>title</b>, another for <b>due</b>, then <b>Get Dates from Input</b> on <b>due</b>.</li>
+            <li>Still inside: <b>Add New Reminder</b> with the title, turn on <b>Remind Me</b> → <b>At Time</b> → the Dates, and put the <b>tag</b> value in <b>Notes</b>.</li>
+            <li>Come back here and tap <b>Test</b>. The full guide is in the app’s repository under docs/setup/iphone-reminders.md.</li>
+          </ol>
+        </details>
+      ) : null}
+    </div>
+  );
+};
+
 export const CustomizeScreen = () => {
   const { document, run } = useNotebook();
   const blocks = todayBlocks(document);
@@ -190,6 +233,8 @@ export const CustomizeScreen = () => {
         </div>
 
         <CalendarsSection />
+
+        <RemindersSection />
 
         <AccountSection />
       </div>

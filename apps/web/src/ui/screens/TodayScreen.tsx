@@ -2,14 +2,38 @@ import { addDays, visibleTodayBlocks, weekOf } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { useEffect, useState } from 'preact/hooks';
 import { useNotebook, useServices, useToday } from '../../state/hooks';
+import { openShortcut, reminderHandoff, staleReminders } from '../../state/reminders-handoff';
 import { BacklogPickBlock, GmailBlock, SpaceBlock, TeamBlock } from '../blocks/SmallBlocks';
 import { NotebookBlock } from '../blocks/NotebookBlock';
 import { ScheduleBlock } from '../blocks/ScheduleBlock';
 import { CaptureBar, SyncBanner, SyncDot } from '../components/chrome';
 import { dayNumber, formatDayMonth, formatWeekday, relativeDay, weekdayLetter } from '../format';
-import { BriefcaseIcon, ChevronLeftIcon, ChevronRightIcon, SlidersIcon } from '../icons';
+import { BellIcon, BriefcaseIcon, ChevronLeftIcon, ChevronRightIcon, SlidersIcon } from '../icons';
 import { href } from '../router';
 import { useSheets } from '../sheets/sheet-context';
+
+/** Offers to bring the iPhone Reminders app up to date after calendar-side or other-device changes (ADR 0007). */
+const RemindersBanner = ({ today }: { today: IsoDate }) => {
+  const { document } = useNotebook();
+  const [, setSent] = useState(0);
+  const stale = staleReminders(document, today);
+  const first = stale[0];
+
+  if (first === undefined) {
+    return null;
+  }
+
+  return (
+    <div class="banner" role="status">
+      <BellIcon size={18} />
+      <span class="banner__text">{stale.length === 1 ? '1 reminder to update' : `${stale.length} reminders to update`} in the Reminders app</span>
+      <button type="button" class="pill-button pill-button--small" onClick={() => {
+        openShortcut(reminderHandoff(first, document.items[first]));
+        setSent((count) => count + 1);
+      }}>Update</button>
+    </div>
+  );
+};
 
 export const TodayScreen = () => {
   const today = useToday();
@@ -57,6 +81,7 @@ export const TodayScreen = () => {
         {day !== today ? <button type="button" class="link-button back-to-today" onClick={() => setDay(today)}>Back to today</button> : null}
       </header>
       <SyncBanner />
+      <RemindersBanner today={today} />
       <div class="stack">
         {blocks.map((block) => {
           switch (block.id) {

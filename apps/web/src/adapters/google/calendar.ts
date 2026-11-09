@@ -1,7 +1,7 @@
 import { addDays, atClockTime, toClockTime, toIsoDate } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { z } from 'zod';
-import type { CalendarEvent, CalendarGateway, CalendarInfo, NewCalendarEvent } from '../../ports';
+import type { CalendarChanges, CalendarEvent, CalendarGateway, CalendarInfo, NewCalendarEvent } from '../../ports';
 import { SCOPES } from './auth';
 import type { GoogleAuth } from './auth';
 import { API, DEFAULT_DURATION_MINUTES, ITEM_PROPERTY, PRIMARY, WRITABLE_ROLES } from './calendar.consts';
@@ -21,6 +21,10 @@ const eventSchema = z.object({
 });
 
 const listSchema = z.object({ summary: z.string().optional(), accessRole: z.string().optional(), items: z.array(eventSchema).default([]) });
+
+/** Deleted events come back as bare stubs (id and status), so each entry is parsed on its own. */
+const changesSchema = z.object({ items: z.array(z.unknown()).default([]), nextPageToken: z.string().optional() });
+const stubSchema = z.object({ id: z.string().min(1), status: z.string().optional() });
 
 const calendarListSchema = z.object({
   items: z.array(z.object({ id: z.string().min(1), summary: z.string().optional(), summaryOverride: z.string().optional(), primary: z.boolean().optional() })).default([]),
@@ -104,6 +108,50 @@ export class GoogleCalendarGateway implements CalendarGateway {
     }))));
 
     return lists.flat().sort((a, b) => Number(b.allDay) - Number(a.allDay) || (a.start ?? '').localeCompare(b.start ?? ''));
+  }
+
+  async listChanged(since: string): Promise<CalendarChanges> {
+    const changes: CalendarChanges = { events: [], deletedIds: [] };
+    let pageToken: string | undefined;
+
+    // A few pages at most: a two-minute window rarely holds more than a handful of edits.
+    for (let page = 0; page < 5; page += 1) {
+      const query = new URLSearchParams({ updatedMin: since, showDeleted: 'true', singleEvents: 'true', maxResults: '250' });
+
+      if (pageToken) {
+        query.set('pageToken', pageToken);
+      }
+
+      const response = await googleFetch(this.auth, SCOPES.calendar, `${eventsUrl(PRIMARY)}?${query.toString()}`);
+      const listing = changesSchema.parse(await response.json());
+
+      for (const entry of listing.items) {
+        const stub = stubSchema.safeParse(entry);
+
+        if (!stub.success) {
+          continue;
+        }
+
+        if (stub.data.status === 'cancelled') {
+          changes.deletedIds.push(stub.data.id);
+          continue;
+        }
+
+        const event = eventSchema.safeParse(entry);
+
+        if (event.success) {
+          changes.events.push(toCalendarEvent(event.data));
+        }
+      }
+
+      pageToken = listing.nextPageToken;
+
+      if (!pageToken) {
+        break;
+      }
+    }
+
+    return changes;
   }
 
   async get(eventId: string): Promise<CalendarEvent | null> {

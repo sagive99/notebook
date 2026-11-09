@@ -23,6 +23,7 @@ Accepted records define current policy for their declared scope; proposed record
 | [0004: Browser OAuth token model](./0004-browser-oauth-token-model.md) | Proposed | Authentication, security | Use Google Identity Services short-lived access tokens, cached on the device until expiry; minimal scopes with Gmail requested incrementally. |
 | [0005: Google Calendar as the calendar hub](./0005-google-calendar-as-calendar-hub.md) | Accepted | Calendar, reminders | Integrate with Google Calendar only; iPhone Calendar mirrors it. Reminders are calendar events linked two ways to items. |
 | [0006: Workspace layering](./0006-workspace-layering.md) | Accepted | `@notebook/core`, `@notebook/web` | Pure domain package; app layered as UI → state → ports ← adapters, enforced by dependency-cruiser. |
+| [0007: iPhone Reminders through a user-installed Shortcut](./0007-iphone-reminders-via-shortcut.md) | Proposed | `@notebook/web` | Opt-in, one-way handoff of reminder items to a "Notebook Reminder" Shortcut through a shortcuts:// link from the save tap. |
 
 ## When to record a decision
 

@@ -130,4 +130,32 @@ describe('CalendarSync', () => {
     expect(calendar.calls).toEqual(['create:Later']);
     expect(sync.getState()).toEqual({ kind: 'idle' });
   });
+
+  it('applies calendar edits to items on any day, not only the day on screen', async () => {
+    const { calendar, store, sync } = setup();
+    const moved = addReminder(store, 'Shave', '2026-11-12', '22:30');
+    const removed = addReminder(store, 'Call the bank', '2026-11-13', '10:00');
+    await sync.flush();
+    const document = store.getSnapshot().document;
+    calendar.editExternally(document.items[moved]?.calendarEventId ?? '', { title: 'Shave and shower', day: '2026-11-14', start: '21:00' });
+    calendar.deleteExternally(document.items[removed]?.calendarEventId ?? '');
+
+    await sync.reconcileChanges(new Date('2026-11-09T21:00:00.000Z'));
+    await sync.flush();
+
+    const items = store.getSnapshot().document.items;
+
+    expect(items[moved]).toMatchObject({ text: 'Shave and shower', day: '2026-11-14', time: '21:00', remind: true });
+    expect(items[removed]).toMatchObject({ remind: false, calendarEventId: null });
+    expect(calendar.calls.filter((call) => call.startsWith('update') || call.startsWith('create:Shave and'))).toEqual([]);
+  });
+
+  it('asks only for changes since the last check, with a minute of overlap', async () => {
+    const { calendar, sync } = setup();
+
+    await sync.reconcileChanges(new Date('2026-11-09T21:00:00.000Z'));
+    await sync.reconcileChanges(new Date('2026-11-09T21:02:00.000Z'));
+
+    expect(calendar.calls.filter((call) => call.startsWith('listChanged'))).toEqual(['listChanged:2026-11-02T21:00:00.000Z', 'listChanged:2026-11-09T20:59:00.000Z']);
+  });
 });
