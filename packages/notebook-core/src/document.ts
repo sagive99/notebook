@@ -87,6 +87,7 @@ export const addItem = (document: NotebookDocument, input: NewItemInput, context
     text: input.text.trim(),
     done: false,
     doneAt: null,
+    ongoingSince: null,
     day: input.day ?? null,
     time: input.time ?? null,
     remind: input.remind ?? false,
@@ -136,6 +137,33 @@ export const scheduleItem = (document: NotebookDocument, id: string, day: string
   const patch: ItemPatch = { day, done: false, ...(leavesSpace ? { spaceId: null, columnId: null } : {}), ...(current.kind === 'idea' ? { kind: 'task' } : {}) };
 
   return updateItem(document, id, patch, context);
+};
+
+/** Marks a task as being worked on now, or stops it. Ongoing tasks sort first wherever tasks are listed. */
+export const setItemOngoing = (document: NotebookDocument, id: string, ongoing: boolean, context: CommandContext): NotebookDocument => {
+  const current = document.items[id];
+
+  if (!current || current.deleted || (current.ongoingSince !== null) === ongoing) {
+    return document;
+  }
+
+  return updateItem(document, id, { ongoingSince: ongoing ? context.now.toISOString() : null, ...(ongoing ? { done: false } : {}) }, context);
+};
+
+/** Moves an item to sit just before another one (or last when `beforeId` is null), keeping the rest in order. */
+export const placeItemBefore = (document: NotebookDocument, id: string, beforeId: string | null, siblings: ReadonlyArray<Item>, context: CommandContext): NotebookDocument => {
+  const others = siblings.filter((item) => item.id !== id);
+  const index = beforeId === null ? others.length : others.findIndex((item) => item.id === beforeId);
+
+  if (index < 0 || !document.items[id]) {
+    return document;
+  }
+
+  const previous = others[index - 1]?.order;
+  const next = others[index]?.order;
+  const order = previous === undefined && next === undefined ? 0 : previous === undefined ? (next ?? 0) - 1 : next === undefined ? previous + 1 : (previous + next) / 2;
+
+  return updateItem(document, id, { order }, context);
 };
 
 export const toggleItemDone = (document: NotebookDocument, id: string, context: CommandContext): NotebookDocument => {
