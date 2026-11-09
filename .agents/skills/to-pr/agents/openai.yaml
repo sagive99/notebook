@@ -1,0 +1,5 @@
+interface:
+  display_name: "Prepare Pull Request"
+  short_description: "Review, verify, and prepare a repository PR"
+  default_prompt: "Use $to-pr to review this branch and prepare a pull request."
+

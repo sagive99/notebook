@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Architecture Decision"
+  short_description: "Record and index an architectural decision"
+  default_prompt: "Use $add-adr to record this architectural decision in the correct repository scope."

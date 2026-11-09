@@ -1,0 +1,4 @@
+interface:
+  display_name: "Change Document Schema"
+  short_description: "Evolve the stored notebook document safely"
+  default_prompt: "Use $change-document-schema to change the notebook document shape compatibly."
