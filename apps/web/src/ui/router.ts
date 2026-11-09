@@ -53,10 +53,7 @@ export const useRoute = (): Route => {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
 
   useEffect(() => {
-    const onChange = () => {
-      setRoute(parseRoute(window.location.hash));
-      window.scrollTo(0, 0);
-    };
+    const onChange = () => setRoute(parseRoute(window.location.hash));
     window.addEventListener('hashchange', onChange);
 
     return () => window.removeEventListener('hashchange', onChange);

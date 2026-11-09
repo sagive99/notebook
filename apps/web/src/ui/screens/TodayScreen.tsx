@@ -25,7 +25,7 @@ export const TodayScreen = () => {
   const blocks = todayBlocks(document).filter((block) => block.enabled);
 
   return (
-    <div class="screen screen--with-capture">
+    <div class="screen">
       <header class="screen-header">
         <div class="screen-header__row">
           <div class="screen-header__titles">

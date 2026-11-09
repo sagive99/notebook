@@ -21,9 +21,10 @@ Inherits the root [AGENTS.md](../../AGENTS.md) and [standards](../../docs/STANDA
 - Sheets edit a draft and apply on Save. Destructive actions ask for confirmation inline.
 - Google popups (`connect`, `connectGmail`) only from click handlers.
 - New screens get a hash route in `router.ts` and a bottom-nav mapping in `components/chrome.tsx`.
+- App shell (iOS home-screen apps strand fixed bars after an input zooms the viewport): the page never scrolls, only `<main class="app-main">` does. No `position: fixed` and no `window.scrollTo` in screens; bottom actions use `CaptureBar` (sticky inside the scroller). Form controls stay at 16px or larger so iOS doesn't zoom on focus. `platform/viewport.ts` sizes the shell to the visible viewport (`--app-height`) and undoes the page shift iOS leaves after the keyboard closes; it is the only code allowed to scroll the window.
 
 ## Checks
 
 - `pnpm --filter @notebook/web test` (Vitest, happy-dom; `*.unit.test.ts(x)`).
 - `pnpm --filter @notebook/web type-check` and `pnpm --filter @notebook/web lint`.
-- `VITE_BASE_PATH=/notebook/ pnpm --filter @notebook/web build`, then `vite preview` with the same variable and check the changed screens at 390×844.
+- `VITE_BASE_PATH=/notebook/ pnpm --filter @notebook/web build`, then `vite preview` with the same variable and check the changed screens at 390×844. For layout changes, also check that `window.scrollY` stays 0 and the nav stays at the bottom after focusing an input; confirm on a real iPhone home-screen app after deploy.

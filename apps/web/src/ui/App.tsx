@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BottomNav } from './components/chrome';
 import { useRoute } from './router';
 import { CustomizeScreen } from './screens/CustomizeScreen';
@@ -16,10 +16,16 @@ import type { SheetControls, SheetRequest } from './sheets/sheet-context';
 
 const Screen = () => {
   const route = useRoute();
+  const main = useRef<HTMLElement>(null);
+
+  // The page never scrolls; only <main> does (iOS shell, see apps/web/AGENTS.md), so reset it per route.
+  useEffect(() => {
+    main.current?.scrollTo(0, 0);
+  }, [route]);
 
   return (
     <>
-      <main class="app-main">
+      <main class="app-main" ref={main}>
         {route.name === 'today' ? <TodayScreen /> : null}
         {route.name === 'spaces' ? <SpacesScreen /> : null}
         {route.name === 'space' ? <SpaceScreen key={route.id} id={route.id} /> : null}
