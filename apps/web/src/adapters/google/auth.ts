@@ -6,6 +6,7 @@ import { safeStorage } from '../../platform/safe-storage';
 export const SCOPES = {
   drive: 'https://www.googleapis.com/auth/drive.appdata',
   calendar: 'https://www.googleapis.com/auth/calendar.events',
+  calendarList: 'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
   gmail: 'https://www.googleapis.com/auth/gmail.readonly',
 } as const;
 

@@ -4,7 +4,9 @@ import { DriveDocumentStore } from '../adapters/google/drive-store';
 import { GmailGateway } from '../adapters/google/gmail';
 import { createLocalStore } from '../adapters/local-store';
 import type { AppConfig } from '../config';
+import { safeStorage } from '../platform/safe-storage';
 import type { AuthPort, CalendarGateway, MailGateway } from '../ports';
+import { SHOWN_CALENDARS_KEY, SYNC_INTERVAL_MS } from './app-services.consts';
 import { CalendarSync } from './calendar-sync';
 import { NotebookStore } from './notebook-store';
 
@@ -20,11 +22,13 @@ export type AppServices = {
   /** Asks for read-only Gmail access on top of the base sign-in (from a tap). */
   connectGmail: () => Promise<void>;
   gmailGranted: () => boolean;
+  connectCalendars: () => Promise<void>;
+  calendarsGranted: () => boolean;
+  shownCalendars: () => string[];
+  setShownCalendars: (calendarIds: string[]) => void;
   disconnect: () => Promise<void>;
   dispose: () => void;
 };
-
-const SYNC_INTERVAL_MS = 120_000;
 
 /**
  * Composition root: wires adapters to the store and services. Nothing else constructs adapters,
@@ -84,6 +88,14 @@ export const createAppServices = (config: AppConfig): AppServices => {
       await auth?.connect([SCOPES.gmail]);
     },
     gmailGranted: () => auth?.hasScope(SCOPES.gmail) ?? false,
+    connectCalendars: async () => {
+      await auth?.connect([SCOPES.calendarList]);
+    },
+    calendarsGranted: () => auth?.hasScope(SCOPES.calendarList) ?? false,
+    shownCalendars: () => (safeStorage.get(SHOWN_CALENDARS_KEY) ?? 'primary').split('\n').filter(Boolean),
+    setShownCalendars: (calendarIds) => {
+      safeStorage.set(SHOWN_CALENDARS_KEY, calendarIds.join('\n'));
+    },
     disconnect: async () => {
       await auth?.disconnect();
     },

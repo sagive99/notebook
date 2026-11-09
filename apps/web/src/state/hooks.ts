@@ -3,7 +3,7 @@ import type { IsoDate } from '@notebook/core';
 import { createContext } from 'preact';
 import { useCallback, useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { AuthRequiredError } from '../ports';
-import type { AuthState, CalendarEvent, StarredEmail } from '../ports';
+import type { AuthState, CalendarEvent, CalendarInfo, StarredEmail } from '../ports';
 import type { AppServices } from './app-services';
 import type { Command, StoreSnapshot } from './notebook-store';
 
@@ -135,19 +135,26 @@ const useRemote = <T>(load: (() => Promise<T>) | null, key: string): { state: Re
 };
 
 export const useDayEvents = (day: IsoDate) => {
-  const { calendar, calendarSync } = useServices();
+  const { calendar, calendarSync, shownCalendars } = useServices();
   const load = useCallback(async (): Promise<CalendarEvent[]> => {
     if (!calendar) {
       return [];
     }
 
-    const events = await calendar.listDay(day);
-    await calendarSync.reconcileDay(day, events);
+    const events = await calendar.listDay(day, shownCalendars());
+    await calendarSync.reconcileDay(day, events.filter((event) => event.calendarId === 'primary'));
 
     return events;
-  }, [calendar, calendarSync, day]);
+  }, [calendar, calendarSync, shownCalendars, day]);
 
   return useRemote(calendar ? load : null, day);
+};
+
+export const useCalendarList = (granted: boolean) => {
+  const { calendar } = useServices();
+  const load = useCallback(async (): Promise<CalendarInfo[]> => (calendar ? calendar.listCalendars() : []), [calendar]);
+
+  return useRemote(granted && calendar ? load : null, 'calendars');
 };
 
 export const useStarredEmails = (enabled: boolean) => {

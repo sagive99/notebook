@@ -26,6 +26,7 @@ export type LocalDocumentStore = {
 export type CalendarEvent = {
   id: string;
   calendarId: string;
+  calendarName: string | null;
   title: string;
   day: IsoDate;
   /** Null for all-day events. */
@@ -50,13 +51,20 @@ export type NewCalendarEvent = {
   notebookItemId: string | null;
 };
 
+export type CalendarInfo = {
+  id: string;
+  name: string;
+  primary: boolean;
+};
+
 export type CalendarGateway = {
-  listDay: (day: IsoDate) => Promise<CalendarEvent[]>;
+  listCalendars: () => Promise<CalendarInfo[]>;
+  listDay: (day: IsoDate, calendarIds?: ReadonlyArray<string>) => Promise<CalendarEvent[]>;
   /** One event by id, or null when it was deleted or cancelled. */
   get: (eventId: string) => Promise<CalendarEvent | null>;
   create: (event: NewCalendarEvent) => Promise<CalendarEvent>;
-  update: (eventId: string, event: NewCalendarEvent) => Promise<CalendarEvent>;
-  remove: (eventId: string) => Promise<void>;
+  update: (eventId: string, event: NewCalendarEvent, calendarId?: string) => Promise<CalendarEvent>;
+  remove: (eventId: string, calendarId?: string) => Promise<void>;
 };
 
 export type StarredEmail = {

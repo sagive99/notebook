@@ -26,12 +26,12 @@ export const ScheduleBlock = ({ day }: { day: IsoDate }) => {
       {state.kind === 'ready' && events.length === 0 ? <Empty>Nothing on the calendar.</Empty> : null}
       <ul class="event-list">
         {events.map((event) => (
-          <li key={event.id}>
+          <li key={`${event.calendarId}:${event.id}`}>
             <button type="button" class="event" onClick={() => sheets.open({ kind: 'event', day, event, onSaved: reload })}>
               <span class="event__bar" aria-hidden="true" />
               <span class="event__body">
                 <span class="event__title" dir="auto">{event.title}</span>
-                <span class="event__time">{event.allDay ? 'All day' : `${event.start ?? ''}${event.end ? ` – ${event.end}` : ''}`}{event.notebookItemId ? <> · <BellIcon size={11} /> from notebook</> : null}</span>
+                <span class="event__time">{event.allDay ? 'All day' : `${event.start ?? ''}${event.end ? ` – ${event.end}` : ''}`}{event.calendarName ? ` · ${event.calendarName}` : null}{event.notebookItemId ? <> · <BellIcon size={11} /> from notebook</> : null}</span>
               </span>
             </button>
           </li>

@@ -39,7 +39,7 @@ export const EventSheet = ({ day, event, onSaved, onClose }: { day: IsoDate; eve
     }
 
     const payload = { title: title.trim(), day: date, start: allDay ? null : start, end: allDay ? null : end, remindMinutesBefore: fromNotebook ? 0 : null, notebookItemId: event?.notebookItemId ?? null };
-    void perform(() => (event ? calendar.update(event.id, payload) : calendar.create(payload)));
+    void perform(() => (event ? calendar.update(event.id, payload, event.calendarId) : calendar.create(payload)));
   };
 
   return (
@@ -72,7 +72,7 @@ export const EventSheet = ({ day, event, onSaved, onClose }: { day: IsoDate; eve
             {confirmDelete ? (
               <>
                 <span>Delete this event from your calendar?</span>
-                <button type="button" class="danger-button" disabled={busy} onClick={() => void perform(() => calendar.remove(event.id))}>Delete</button>
+                <button type="button" class="danger-button" disabled={busy} onClick={() => void perform(() => calendar.remove(event.id, event.calendarId))}>Delete</button>
                 <button type="button" class="link-button" onClick={() => setConfirmDelete(false)}>Keep</button>
               </>
             ) : <button type="button" class="link-button link-button--danger" onClick={() => setConfirmDelete(true)}>Delete event</button>}
