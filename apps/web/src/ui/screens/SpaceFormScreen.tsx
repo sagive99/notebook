@@ -1,4 +1,4 @@
-import { addSpace, deleteSpace, updateSpace } from '@notebook/core';
+import { addSpace, deleteSpace, isWorkSpace, updateSpace } from '@notebook/core';
 import type { BoardColumn, SpaceColor, SpaceFields, SpaceLayout } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
@@ -36,7 +36,7 @@ export const SpaceFormScreen = ({ id }: { id?: string }) => {
   const [showOnToday, setShowOnToday] = useState(existing?.showOnToday ?? false);
   // Null keeps the default rule (People-layout spaces are work) until the user chooses.
   const [workChoice, setWorkChoice] = useState<boolean | null>(existing?.work ?? null);
-  const work = workChoice ?? layout === 'people';
+  const work = isWorkSpace({ work: workChoice, layout });
   const [inCapture, setInCapture] = useState(existing?.inCapture ?? true);
   const [confirmDelete, setConfirmDelete] = useState(false);
 

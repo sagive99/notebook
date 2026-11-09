@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { addItem, addPerson, addSpace, createDocument, deleteSpace, setItemOngoing, toggleItemDone, updateSettings, updateSpace } from './document';
 import { parseDocument } from './merge';
-import { dayPage, isWorkSpace, todayBlocks, visibleTodayBlocks } from './selectors';
+import { mergeDocuments } from './merge';
+import { dayPage, isWorkEvent, isWorkSpace, liveItems, todayBlocks, visibleTodayBlocks, withoutWork } from './selectors';
 import { testContext } from './test-support';
 
 describe('dayPage', () => {
@@ -118,5 +119,37 @@ describe('work switch', () => {
     const parsed = parseDocument(raw);
 
     expect(parsed.ok && parsed.document.spaces[teamId]?.work).toBeNull();
+  });
+
+  it('filters any item list and recognises work calendar events and work reminders', () => {
+    const { document } = fixture();
+    const all = liveItems(document);
+    const workItem = all.find((item) => item.text === 'CR for Dana');
+    const looseItem = all.find((item) => item.text === 'Buy milk');
+
+    expect(texts(withoutWork(document, all, true))).toEqual(['Buy milk']);
+    expect(withoutWork(document, all, false)).toHaveLength(all.length);
+    expect(isWorkEvent(document, { calendarId: 'team@group', notebookItemId: null }, ['team@group'])).toBe(true);
+    expect(isWorkEvent(document, { calendarId: 'primary', notebookItemId: workItem?.id ?? null }, [])).toBe(true);
+    expect(isWorkEvent(document, { calendarId: 'primary', notebookItemId: looseItem?.id ?? null }, ['team@group'])).toBe(false);
+  });
+
+  it('keeps an explicit work choice when an older app version re-saves the space without the flag', () => {
+    const { context, document, teamId, backlogId } = fixture();
+    const chosen = updateSpace(updateSpace(document, teamId, { work: false }, context), backlogId, { work: true }, context);
+    const raw = JSON.parse(JSON.stringify(chosen)) as { spaces: Record<string, Record<string, unknown>> };
+    Object.values(raw.spaces).forEach((space) => {
+      delete space.work;
+    });
+    const olderSave = parseDocument(raw);
+
+    if (!olderSave.ok) {
+      throw new Error(olderSave.error);
+    }
+
+    [mergeDocuments(chosen, olderSave.document), mergeDocuments(olderSave.document, chosen)].forEach((merged) => {
+      expect(merged.spaces[teamId]?.work).toBe(false);
+      expect(merged.spaces[backlogId]?.work).toBe(true);
+    });
   });
 });

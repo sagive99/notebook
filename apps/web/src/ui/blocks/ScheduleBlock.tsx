@@ -1,4 +1,4 @@
-import { isWorkItem } from '@notebook/core';
+import { isWorkEvent } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useDayEvents, useNotebook, useServices } from '../../state/hooks';
@@ -13,13 +13,7 @@ export const ScheduleBlock = ({ day, hideWork = false }: { day: IsoDate; hideWor
   const { state, reload } = useDayEvents(day);
   const sheets = useSheets();
   const loaded = state.kind === 'ready' ? state.data : state.kind === 'loading' || state.kind === 'error' ? state.previous ?? [] : [];
-  // With Work off: drop events from work calendars and reminders that belong to work items.
-  const isWorkEvent = (event: (typeof loaded)[number]): boolean => {
-    const item = event.notebookItemId ? document.items[event.notebookItemId] : undefined;
-
-    return workIds.includes(event.calendarId) || Boolean(item && isWorkItem(document, item));
-  };
-  const events = hideWork ? loaded.filter((event) => !isWorkEvent(event)) : loaded;
+  const events = hideWork ? loaded.filter((event) => !isWorkEvent(document, event, workIds)) : loaded;
   const hiddenCount = loaded.length - events.length;
 
   return (

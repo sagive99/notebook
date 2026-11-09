@@ -82,7 +82,8 @@ export const spaceSchema = z.object({
   showOnToday: z.boolean().default(false),
   /**
    * Whether the space is work. Null means "not chosen yet": People-layout spaces then count as work (see `isWorkSpace`).
-   * Added after v1, hence the default; an older app version drops it on save and the space falls back to that rule.
+   * Added after v1, hence the default. An older app version re-saves spaces without it; merge restores the chosen value
+   * (see the tie-break in merge.ts) unless that older device also edited the space, which resets it to "not chosen".
    */
   work: z.boolean().nullable().default(null),
   inCapture: z.boolean().default(true),

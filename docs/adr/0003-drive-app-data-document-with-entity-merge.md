@@ -22,7 +22,7 @@ With no server (ADR 0002), the notebook needs durable storage that syncs between
   - in Google Drive as `notebook.json` in the hidden `appDataFolder`, scope `drive.appdata`.
 - Every entity (item, person, space) and the settings object carries `updatedAt`. Deletions keep a tombstone (`deleted: true`).
 - Sync = load remote → `mergeDocuments(remote, local)` → save if different, guarded by Drive's file `version` as an optimistic-concurrency token. A version mismatch reloads and merges again (up to three attempts).
-- Merge is per entity, last-writer-wins by `updatedAt`; equal timestamps prefer the tombstone, then a stable content order, so merge is commutative and idempotent.
+- Merge is per entity, last-writer-wins by `updatedAt`; equal timestamps prefer the tombstone, then the copy with fewer empty (null) fields, then a stable content order, so merge is commutative and idempotent. The empty-fields step (added 2026-11-09) restores fields that an older app version dropped when it re-saved an entity it did not edit.
 - Tombstones older than 30 days are pruned at sync time, from both the upload and the device copy.
 - A sync with no local changes since the last successful sync first asks Drive for the file version only, and skips the download and merge when it is unchanged.
 - Remote data that fails schema validation is never adopted and never overwrites the device copy; the user sees an error.

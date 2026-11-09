@@ -1,4 +1,4 @@
-import { addItem, blockedCount, openSpaceItems, scheduleItem, spaceItems, waitingCount } from '@notebook/core';
+import { addItem, blockedCount, openSpaceItems, scheduleItem, spaceItems, waitingCount, withoutWork } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook, useServices, useStarredEmails } from '../../state/hooks';
@@ -66,11 +66,11 @@ export const GmailBlock = ({ today }: { today: IsoDate }) => {
   );
 };
 
-export const BacklogPickBlock = ({ today }: { today: IsoDate }) => {
+export const BacklogPickBlock = ({ today, hideWork = false }: { today: IsoDate; hideWork?: boolean }) => {
   const { document, run } = useNotebook();
   const [index, setIndex] = useState(0);
   const backlogId = document.settings.backlogSpaceId;
-  const ideas = backlogId ? spaceItems(document, backlogId).filter((item) => !item.done && item.day === null) : [];
+  const ideas = backlogId ? withoutWork(document, spaceItems(document, backlogId), hideWork).filter((item) => !item.done && item.day === null) : [];
   const idea = ideas.length > 0 ? ideas[index % ideas.length] : undefined;
 
   return (
@@ -89,7 +89,7 @@ export const BacklogPickBlock = ({ today }: { today: IsoDate }) => {
   );
 };
 
-export const SpaceBlock = ({ spaceId, today }: { spaceId: string; today: IsoDate }) => {
+export const SpaceBlock = ({ spaceId, today, hideWork = false }: { spaceId: string; today: IsoDate; hideWork?: boolean }) => {
   const { document } = useNotebook();
   const space = document.spaces[spaceId];
 
@@ -97,7 +97,7 @@ export const SpaceBlock = ({ spaceId, today }: { spaceId: string; today: IsoDate
     return null;
   }
 
-  const open = openSpaceItems(document, spaceId);
+  const open = withoutWork(document, openSpaceItems(document, spaceId), hideWork);
 
   return (
     <Card>

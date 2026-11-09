@@ -40,7 +40,7 @@ export const TodayScreen = () => {
             <h1 class="screen-header__title">{formatDayMonth(day)}</h1>
           </div>
           <div class="screen-header__actions">
-            <button type="button" role="switch" aria-checked={!workHidden} aria-label="Show work" class={`work-switch ${workHidden ? '' : 'work-switch--on'}`} onClick={toggleWork}><BriefcaseIcon size={16} />{workHidden ? 'Work off' : 'Work on'}</button>
+            <button type="button" role="switch" aria-checked={!workHidden} aria-label="Work" class={`work-switch ${workHidden ? '' : 'work-switch--on'}`} onClick={toggleWork}><BriefcaseIcon size={16} />{workHidden ? 'Work off' : 'Work on'}</button>
             <a class="round-button" href={href({ name: 'customize' })} aria-label="Customize Today"><SlidersIcon size={20} /></a>
           </div>
         </div>
@@ -69,9 +69,9 @@ export const TodayScreen = () => {
             case 'gmail-starred':
               return <GmailBlock key={block.id} today={today} />;
             case 'backlog-pick':
-              return <BacklogPickBlock key={block.id} today={today} />;
+              return <BacklogPickBlock key={block.id} today={today} hideWork={workHidden} />;
             default:
-              return <SpaceBlock key={block.id} spaceId={block.id.slice('space:'.length)} today={today} />;
+              return <SpaceBlock key={block.id} spaceId={block.id.slice('space:'.length)} today={today} hideWork={workHidden} />;
           }
         })}
         {blocks.length === 0 ? <p class="empty">Every block is hidden. Turn some on in Customize.</p> : null}

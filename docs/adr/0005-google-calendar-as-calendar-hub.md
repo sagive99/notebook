@@ -38,6 +38,7 @@ The owner wants calendar integration built into the app, two ways: events added 
 - If two devices add the same reminder before either syncs the event id, a duplicate event can appear (rare; delete one).
 - Calendar-side changes reach items when the item's day (or the event's new day) is viewed in the app.
 - Writes go to the primary calendar. Other calendars (shared, subscribed) can be shown read-alongside: the user grants `calendar.calendarlist.readonly` and picks calendars in Customize. The pick is stored per device, not in the synced document. Only primary events take part in item linking.
+- Which calendars are marked Work for the Today Work switch, and the switch position itself, are also per-device settings. Whether a space is work (`Space.work`) is part of the synced notebook.
 
 ## Verification
 

@@ -30,7 +30,7 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 | Ongoing | A task being worked on now (`ongoingSince` set, not done). Shown first and highlighted on People, and on today's page whatever its own day. |
 | Up next | A person's open tasks that are not ongoing, in manual order. Item `order` is one number per item shared by every list (Today, its space, People), so reordering in one place moves it everywhere. |
 | Waiting on | Open tasks linked to a person. |
-| Work | Items linked to a person or living in a work space, plus events from calendars marked Work. A space is work when flagged (`Space.work`); until the user chooses, People-layout spaces are. Loose notebook items are never work. |
+| Work | Items linked to a person or living in a work space, plus events from calendars marked Work and calendar reminders of work items. A space is work when flagged (`Space.work`); until the user chooses, People-layout spaces are. Loose notebook items are never work. |
 | Work switch | The Today toggle that hides everything work (items, team and work-space blocks, work calendar events). A view setting remembered per device; it deletes nothing. |
 | Blocked | A person flagged as stuck on something outside their control. |
 | Tombstone | A deleted entity kept with `deleted: true` so deletions survive merging. |

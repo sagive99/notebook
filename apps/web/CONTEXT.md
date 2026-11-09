@@ -27,7 +27,7 @@ ports.ts  ◄── implemented by ── adapters/ (google/auth, drive-store, c
 
 | Route | Screen |
 | --- | --- |
-| `#/today` (default) | Today: header with the Work switch, week strip, enabled blocks, capture bar. Work off hides work items, work blocks, and events from work calendars; the switch and the work-calendar marks are device settings in `app-services.ts` |
+| `#/today` (default) | Today: header with the Work switch, week strip, enabled blocks, capture bar. Work off hides work items (also inside pinned non-work spaces), work blocks, events from work calendars, and reminders of work items; the switch and the work-calendar marks are device settings in `app-services.ts` |
 | `#/customize` | Block order and visibility, notebook rules, account and sync |
 | `#/spaces`, `#/space/<id>`, `#/space-settings/<id>`, `#/new-space` | Spaces grid, a space in its layout, space settings, creation |
 | `#/people` | People board: ongoing and up-next tasks per person, ▶ and drag (`ui/components/useTaskDrag.ts`, pointer events, transform written per frame) to set ongoing or reorder, ✓ kept until leaving |
