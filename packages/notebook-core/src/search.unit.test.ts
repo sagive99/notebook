@@ -23,7 +23,7 @@ describe('searchNotebook', () => {
 
     expect(groups.tasks.map((item) => item.text)).toEqual(['Deploy map external layers', 'Ask about the deploy']);
     expect(groups.notes.map((item) => item.text)).toEqual(['Prod runs HTTP/2 for the deploy']);
-    expect(groups.people.map((person) => person.name)).toEqual(['Omer']);
+    expect(groups.people.map((hit) => [hit.person.name, hit.ongoing?.text])).toEqual([['Omer', 'Deploy map external layers']]);
     expect(groups.ideas).toEqual([]);
     expect(searchNotebook(document, 'someday').ideas.map((item) => item.text)).toEqual(['Learn QUIC']);
     expect(searchNotebook(document, '  ')).toEqual({ tasks: [], notes: [], ideas: [], people: [], spaces: [] });

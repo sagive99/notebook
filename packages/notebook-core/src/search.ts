@@ -1,12 +1,15 @@
-import { addDays, compareIsoDates } from './dates';
+import { addDays, compareIsoDates, toIsoDate } from './dates';
 import { isOngoing, liveItems, livePeople, liveSpaces } from './selectors';
 import type { IsoDate, Item, NotebookDocument, Person, Space } from './types';
+
+/** A person hit, with the ongoing task to show under the name (the matching one when the match came from it). */
+export type PersonHit = { person: Person; ongoing: Item | null };
 
 export type SearchGroups = {
   tasks: Item[];
   notes: Item[];
   ideas: Item[];
-  people: Person[];
+  people: PersonHit[];
   spaces: Space[];
 };
 
@@ -17,7 +20,9 @@ export const SEARCH_TYPES: ReadonlyArray<SearchType> = ['tasks', 'notes', 'ideas
 const KIND_GROUP: Record<Item['kind'], 'tasks' | 'notes' | 'ideas'> = { task: 'tasks', note: 'notes', idea: 'ideas' };
 
 /** Open, ongoing items first, then open items, then finished ones; newest edits first within each. */
-const relevance = (left: Item, right: Item): number => Number(isOngoing(right)) - Number(isOngoing(left)) || Number(left.done) - Number(right.done) || right.updatedAt.localeCompare(left.updatedAt);
+const newestFirst = (left: string, right: string): number => (left === right ? 0 : left < right ? 1 : -1);
+
+const relevance = (left: Item, right: Item): number => Number(isOngoing(right)) - Number(isOngoing(left)) || Number(left.done) - Number(right.done) || newestFirst(left.updatedAt, right.updatedAt);
 
 /** Everything matching the query, grouped by type. People also match on their ongoing tasks. */
 export const searchNotebook = (document: NotebookDocument, query: string, limitPerGroup = 30): SearchGroups => {
@@ -29,15 +34,22 @@ export const searchNotebook = (document: NotebookDocument, query: string, limitP
   }
 
   const matches = (value: string): boolean => value.toLocaleLowerCase().includes(needle);
-  const items = liveItems(document).filter((item) => matches(item.text) || item.tags.some(matches)).sort(relevance);
-  const ongoingByPerson = new Map<string, string[]>();
-  liveItems(document).filter((item) => isOngoing(item) && item.personId !== null).forEach((item) => ongoingByPerson.set(item.personId ?? '', [...(ongoingByPerson.get(item.personId ?? '') ?? []), item.text]));
+  const all = liveItems(document);
+  const items = all.filter((item) => matches(item.text) || item.tags.some(matches)).sort(relevance);
+  const ongoingByPerson = new Map<string, Item[]>();
+  all.filter((item) => isOngoing(item) && item.personId !== null).sort((left, right) => (left.ongoingSince ?? '').localeCompare(right.ongoingSince ?? '')).forEach((item) => ongoingByPerson.set(item.personId ?? '', [...(ongoingByPerson.get(item.personId ?? '') ?? []), item]));
+  const personHit = (person: Person): PersonHit | null => {
+    const ongoing = ongoingByPerson.get(person.id) ?? [];
+    const matching = ongoing.find((item) => matches(item.text));
+
+    return matches(person.name) || matches(person.notes) || matching ? { person, ongoing: matching ?? ongoing[0] ?? null } : null;
+  };
 
   return {
     tasks: items.filter((item) => KIND_GROUP[item.kind] === 'tasks').slice(0, limitPerGroup),
     notes: items.filter((item) => KIND_GROUP[item.kind] === 'notes').slice(0, limitPerGroup),
     ideas: items.filter((item) => KIND_GROUP[item.kind] === 'ideas').slice(0, limitPerGroup),
-    people: livePeople(document).filter((person) => matches(person.name) || matches(person.notes) || (ongoingByPerson.get(person.id) ?? []).some(matches)).slice(0, limitPerGroup),
+    people: livePeople(document).map(personHit).filter((hit): hit is PersonHit => hit !== null).slice(0, limitPerGroup),
     spaces: liveSpaces(document).filter((space) => matches(space.name)).slice(0, limitPerGroup),
   };
 };
@@ -71,7 +83,7 @@ export const quickFilterItems = (document: NotebookDocument, id: QuickFilterId, 
     case 'reminders':
       return items.filter((item) => item.remind && !item.done && item.day !== null && compareIsoDates(item.day, today) >= 0).sort((left, right) => compareIsoDates(left.day ?? '', right.day ?? '') || (left.time ?? '').localeCompare(right.time ?? ''));
     case 'done-week':
-      return items.filter((item) => item.done && item.doneAt !== null && item.doneAt.slice(0, 10) >= weekStart).sort((left, right) => (right.doneAt ?? '').localeCompare(left.doneAt ?? ''));
+      return items.filter((item) => item.done && item.doneAt !== null && toIsoDate(new Date(item.doneAt)) >= weekStart).sort((left, right) => newestFirst(left.doneAt ?? '', right.doneAt ?? ''));
   }
 };
 

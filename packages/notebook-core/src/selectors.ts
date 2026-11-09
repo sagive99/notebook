@@ -47,10 +47,13 @@ export type DayPage = {
 };
 
 export const dayPage = (document: NotebookDocument, day: IsoDate, today: IsoDate): DayPage => {
-  const candidates = liveItems(document).filter((item) => item.day !== null && visibleOnDayPages(document, item));
-  const onDay = candidates.filter((item) => item.day === day);
+  const visible = liveItems(document).filter((item) => visibleOnDayPages(document, item));
+  const candidates = visible.filter((item) => item.day !== null);
+  // On today's page, ongoing tasks from any day (or none) join the open list, so what's being worked on is always first.
+  const ongoingElsewhere = day === today ? visible.filter((item) => isOngoing(item) && item.day !== today) : [];
+  const onDay = [...candidates.filter((item) => item.day === day), ...ongoingElsewhere];
   const carried = day === today && document.settings.carryOver
-    ? candidates.filter((item) => item.kind === 'task' && !item.done && item.day !== null && compareIsoDates(item.day, today) < 0).sort((left, right) => compareIsoDates(left.day ?? '', right.day ?? '') || left.order - right.order)
+    ? candidates.filter((item) => item.kind === 'task' && !item.done && !isOngoing(item) && item.day !== null && compareIsoDates(item.day, today) < 0).sort((left, right) => compareIsoDates(left.day ?? '', right.day ?? '') || left.order - right.order)
     : [];
 
   return {

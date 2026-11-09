@@ -150,7 +150,10 @@ export const setItemOngoing = (document: NotebookDocument, id: string, ongoing: 
   return updateItem(document, id, { ongoingSince: ongoing ? context.now.toISOString() : null, ...(ongoing ? { done: false } : {}) }, context);
 };
 
-/** Moves an item to sit just before another one (or last when `beforeId` is null), keeping the rest in order. */
+/**
+ * Moves an item to sit just before another one (or last when `beforeId` is null) among `siblings`, keeping the rest
+ * in order. `order` is one number per item, shared by every list that shows it (Today, its space, People).
+ */
 export const placeItemBefore = (document: NotebookDocument, id: string, beforeId: string | null, siblings: ReadonlyArray<Item>, context: CommandContext): NotebookDocument => {
   const others = siblings.filter((item) => item.id !== id);
   const index = beforeId === null ? others.length : others.findIndex((item) => item.id === beforeId);
@@ -161,10 +164,20 @@ export const placeItemBefore = (document: NotebookDocument, id: string, beforeId
 
   const previous = others[index - 1]?.order;
   const next = others[index]?.order;
+
+  // No room left between the neighbours (equal orders, or the gap halved too often): renumber the siblings.
+  if (previous !== undefined && next !== undefined && next - previous < MIN_ORDER_GAP) {
+    const renumbered = [...others.slice(0, index), document.items[id], ...others.slice(index)].reduce((current, item, position) => (item && current.items[item.id]?.order !== position ? updateItem(current, item.id, { order: position }, context) : current), document);
+
+    return renumbered;
+  }
+
   const order = previous === undefined && next === undefined ? 0 : previous === undefined ? (next ?? 0) - 1 : next === undefined ? previous + 1 : (previous + next) / 2;
 
   return updateItem(document, id, { order }, context);
 };
+
+const MIN_ORDER_GAP = 1e-6;
 
 export const toggleItemDone = (document: NotebookDocument, id: string, context: CommandContext): NotebookDocument => {
   const current = document.items[id];
