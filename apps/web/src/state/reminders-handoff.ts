@@ -26,17 +26,30 @@ export const setRemindersEnabled = (enabled: boolean): void => {
 /** The tag written into the reminder's notes; the Shortcut finds and replaces reminders by it. */
 export const reminderTag = (itemId: string): string => `notebook:${itemId}`;
 
-/** "2026-11-09 22:30": a form Shortcuts' "Get Dates from Input" reads in every locale. */
-export const reminderDue = (item: Pick<Item, 'day' | 'time'>): string | null => (item.day ? `${item.day} ${item.time ?? DEFAULT_REMINDER_TIME}` : null);
+/**
+ * ISO 8601 with the phone's offset ("2026-11-09T22:30:00+02:00"). Shortcuts' "Get Dates from Input"
+ * reads this in every interface language; the plain "2026-11-09 22:30" failed on a Hebrew iPhone.
+ */
+export const reminderDue = (item: Pick<Item, 'day' | 'time'>): string | null => (item.day ? isoWithOffset(atLocal(item.day, item.time ?? DEFAULT_REMINDER_TIME)) : null);
 
 export const shortcutUrl = (payload: ReminderPayload): string =>
   `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(JSON.stringify(payload))}`;
 
-/** Local "YYYY-MM-DD HH:MM", the same shape as a reminder's due, so the two compare as strings. */
-const localStamp = (at: Date): string => {
-  const pad = (value: number) => String(value).padStart(2, '0');
+const pad = (value: number): string => String(Math.abs(value)).padStart(2, '0');
 
-  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+const atLocal = (day: string, time: string): Date => {
+  const [year = 0, month = 1, date = 1] = day.split('-').map(Number);
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+
+  return new Date(year, month - 1, date, hours, minutes);
+};
+
+/** Local wall time plus its UTC offset, so the Shortcut sets the alert at the same moment the notebook shows. */
+const isoWithOffset = (at: Date): string => {
+  const offset = -at.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}:00${sign}${pad(Math.trunc(offset / 60))}:${pad(offset % 60)}`;
 };
 
 type SentMap = Record<string, string>;
@@ -84,12 +97,11 @@ export const staleReminders = (document: Pick<NotebookDocument, 'items'>, now: D
   }
 
   const sent = readSent();
-  const nowDue = localStamp(now);
   const stale = Object.values(document.items).filter((item) => {
     const next = wanted(item);
 
     if (next) {
-      return next.due >= nowDue && sent[item.id] !== signatureOf(next);
+      return Date.parse(next.due) >= now.getTime() && sent[item.id] !== signatureOf(next);
     }
 
     return sent[item.id] !== undefined;
@@ -136,7 +148,7 @@ export const reminderHandoff = (itemId: string, item: Item | undefined): string 
 
 /** A test reminder two minutes from now, for checking the Shortcut after setup. Not recorded. */
 export const testReminderUrl = (now: Date): string =>
-  shortcutUrl({ action: 'add', tag: 'notebook:test', title: 'Notebook test reminder', due: localStamp(new Date(now.getTime() + 2 * 60_000)) });
+  shortcutUrl({ action: 'add', tag: 'notebook:test', title: 'Notebook test reminder', due: isoWithOffset(new Date(now.getTime() + 2 * 60_000)) });
 
 /** Opens the Shortcut. Must run inside the tap that saved, or iOS may block the app switch. */
 export const openShortcut = (url: string | null): void => {

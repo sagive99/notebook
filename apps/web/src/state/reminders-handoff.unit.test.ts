@@ -32,13 +32,13 @@ describe('reminders handoff', () => {
   });
 
   it('sends a new reminder once, then only when the title or time changes', () => {
-    expect(payload(reminderHandoff('a1', item()))).toEqual({ action: 'add', tag: 'notebook:a1', title: 'להתגלח', due: '2026-11-09 22:30' });
+    expect(payload(reminderHandoff('a1', item()))).toEqual({ action: 'add', tag: 'notebook:a1', title: 'להתגלח', due: expect.stringMatching(/^2026-11-09T22:30:00[+-]\d{2}:\d{2}$/u) });
     expect(reminderHandoff('a1', item({ priority: 'high' }))).toBeNull();
-    expect(payload(reminderHandoff('a1', item({ time: '23:00' })))).toMatchObject({ action: 'add', due: '2026-11-09 23:00' });
+    expect(payload(reminderHandoff('a1', item({ time: '23:00' })))).toMatchObject({ action: 'add', due: expect.stringMatching(/^2026-11-09T23:00:00[+-]\d{2}:\d{2}$/u) });
   });
 
   it('uses the default morning time for a day without a time', () => {
-    expect(payload(reminderHandoff('a1', item({ time: null })))).toMatchObject({ due: '2026-11-09 08:30' });
+    expect(payload(reminderHandoff('a1', item({ time: null })))).toMatchObject({ due: expect.stringMatching(/^2026-11-09T08:30:00[+-]\d{2}:\d{2}$/u) });
   });
 
   it('removes a sent reminder when the item stops wanting one, and only then', () => {
@@ -59,8 +59,14 @@ describe('reminders handoff', () => {
     expect(payload(reminderHandoff('a1', item()))).toMatchObject({ action: 'add' });
   });
 
+  it('sends a time that points at the same moment as the item', () => {
+    const due = (payload(reminderHandoff('a1', item())) as { due: string }).due;
+
+    expect(Date.parse(due)).toBe(new Date(2026, 10, 9, 22, 30).getTime());
+  });
+
   it('builds a test reminder two minutes ahead', () => {
-    expect(payload(testReminderUrl(new Date(2026, 10, 9, 23, 59)))).toMatchObject({ due: '2026-11-10 00:01', tag: 'notebook:test' });
+    expect(payload(testReminderUrl(new Date(2026, 10, 9, 23, 59)))).toMatchObject({ due: expect.stringMatching(/^2026-11-10T00:01:00[+-]\d{2}:\d{2}$/u), tag: 'notebook:test' });
   });
 });
 
