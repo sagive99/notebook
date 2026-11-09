@@ -1,14 +1,20 @@
+import { isWorkEvent } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
-import { useDayEvents, useServices } from '../../state/hooks';
+import { useState } from 'preact/hooks';
+import { useDayEvents, useNotebook, useServices } from '../../state/hooks';
 import { Card, Empty } from '../components/primitives';
 import { BellIcon } from '../icons';
 import { useSheets } from '../sheets/sheet-context';
 
-export const ScheduleBlock = ({ day }: { day: IsoDate }) => {
-  const { calendar } = useServices();
+export const ScheduleBlock = ({ day, hideWork = false }: { day: IsoDate; hideWork?: boolean }) => {
+  const { calendar, workCalendars } = useServices();
+  const { document } = useNotebook();
+  const [workIds] = useState(workCalendars);
   const { state, reload } = useDayEvents(day);
   const sheets = useSheets();
-  const events = state.kind === 'ready' ? state.data : state.kind === 'loading' || state.kind === 'error' ? state.previous ?? [] : [];
+  const loaded = state.kind === 'ready' ? state.data : state.kind === 'loading' || state.kind === 'error' ? state.previous ?? [] : [];
+  const events = hideWork ? loaded.filter((event) => !isWorkEvent(document, event, workIds)) : loaded;
+  const hiddenCount = loaded.length - events.length;
 
   return (
     <Card>
@@ -23,7 +29,7 @@ export const ScheduleBlock = ({ day }: { day: IsoDate }) => {
       {state.kind === 'needs-auth' ? <Empty>Reconnect Google to load your calendar.</Empty> : null}
       {state.kind === 'error' ? <p class="inline-error" role="alert">{state.message} <button type="button" class="link-button" onClick={reload}>Retry</button></p> : null}
       {state.kind === 'loading' && events.length === 0 ? <p class="card__meta">Loading…</p> : null}
-      {state.kind === 'ready' && events.length === 0 ? <Empty>Nothing on the calendar.</Empty> : null}
+      {state.kind === 'ready' && events.length === 0 ? <Empty>{hiddenCount > 0 ? 'Nothing besides work on the calendar.' : 'Nothing on the calendar.'}</Empty> : null}
       <ul class="event-list">
         {events.map((event) => (
           <li key={`${event.calendarId}:${event.id}`}>

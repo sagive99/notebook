@@ -9,7 +9,7 @@ The document lives in three places at once: the Drive file, each device's cache,
 
 ## Rules
 
-1. **Add, don't break.** New fields are optional or have `.default(...)` so documents written by older versions still parse.
+1. **Add, don't break.** New fields are optional or have `.default(...)` so documents written by older versions still parse. Prefer `.nullable().default(null)` for a new field whose value the user chooses: on equal timestamps, merge keeps the copy with fewer null fields, which restores a value an older version dropped.
 2. **Older versions must keep working.** The previous release parses with its own schema: Zod objects strip unknown keys, so a new field written by a newer device is dropped when an older device saves that entity. Accept that, or keep the field's meaning safe to lose.
 3. **No renames or type changes in place.** Add the new field, read both, write the new one; remove the old one only in a later release.
 4. **Bump `DOCUMENT_VERSION` only for incompatible changes,** and add a migration in `parseDocument` from every older version. A bump makes older apps reject newer files, so it needs an ADR.

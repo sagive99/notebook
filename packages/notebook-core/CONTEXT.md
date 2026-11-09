@@ -24,5 +24,7 @@ The domain model of the notebook, shared by every device and app version.
 - `Person.now` is deprecated (replaced by ongoing tasks) but kept so a save from this version doesn't erase text older versions still show; the People board offers to convert it.
 - An older app version drops `ongoingSince` when it saves an item; accepted, the task falls back to up next (tested).
 - `placeItemBefore` renumbers the siblings when two neighbours have no gap left.
+- Work is derived, never stored per item: `isWorkItem` (person link or work space) and `isWorkSpace` (`Space.work`, null = People layout). `dayPage(..., { hideWork })`, `withoutWork`, `isWorkEvent`, and `visibleTodayBlocks` apply the Today Work switch.
+- Merge tie-break on equal timestamps: tombstone, then fewer null fields (restores fields an older version dropped), then content order.
 - Finishing an ongoing task keeps `ongoingSince`, so Undo returns it to ongoing; `isOngoing` means set and not done.
 - A new document contains two starter spaces, "Team" (people layout) and "Ideas backlog" (list), referenced from settings.

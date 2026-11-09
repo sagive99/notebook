@@ -46,8 +46,33 @@ export type DayPage = {
   done: Item[];
 };
 
-export const dayPage = (document: NotebookDocument, day: IsoDate, today: IsoDate): DayPage => {
-  const visible = liveItems(document).filter((item) => visibleOnDayPages(document, item));
+/** A space is work when marked so; until the user chooses, People-layout spaces (the team) count as work. */
+export const isWorkSpace = (space: Pick<Space, 'work' | 'layout'>): boolean => space.work ?? space.layout === 'people';
+
+/** Work items are those linked to a team member or living in a work space. Loose notebook items are not work. */
+export const isWorkItem = (document: NotebookDocument, item: Item): boolean => {
+  const space = item.spaceId ? document.spaces[item.spaceId] : undefined;
+
+  return item.personId !== null || Boolean(space && !space.deleted && isWorkSpace(space));
+};
+
+/** The given items minus work ones while Work is switched off; every Today list goes through this. */
+export const withoutWork = (document: NotebookDocument, items: ReadonlyArray<Item>, hideWork: boolean): Item[] => (hideWork ? items.filter((item) => !isWorkItem(document, item)) : [...items]);
+
+/** A calendar event is work when its calendar is marked Work, or it is the reminder of a work item. */
+export const isWorkEvent = (document: NotebookDocument, event: { calendarId: string; notebookItemId: string | null }, workCalendarIds: ReadonlyArray<string>): boolean => {
+  const item = event.notebookItemId ? document.items[event.notebookItemId] : undefined;
+
+  return workCalendarIds.includes(event.calendarId) || Boolean(item && !item.deleted && isWorkItem(document, item));
+};
+
+export type DayPageOptions = {
+  /** Leave work items out, for when the user has switched Work off on Today. */
+  hideWork?: boolean;
+};
+
+export const dayPage = (document: NotebookDocument, day: IsoDate, today: IsoDate, options: DayPageOptions = {}): DayPage => {
+  const visible = withoutWork(document, liveItems(document), options.hideWork ?? false).filter((item) => visibleOnDayPages(document, item));
   const candidates = visible.filter((item) => item.day !== null);
   // On today's page, ongoing tasks from any day (or none) join the open list, so what's being worked on is always first.
   const ongoingElsewhere = day === today ? visible.filter((item) => isOngoing(item) && item.day !== today) : [];
@@ -101,4 +126,16 @@ export const todayBlocks = (document: NotebookDocument): TodayBlock[] => {
   const extra = spaces.filter((space) => !listed.has(`space:${space.id}`)).map((space): TodayBlock => ({ id: `space:${space.id}`, enabled: false }));
 
   return [...configured, ...extra];
+};
+
+/** The blocks to render on Today: the enabled ones, minus work blocks while Work is switched off. */
+export const visibleTodayBlocks = (document: NotebookDocument, hideWork: boolean): TodayBlock[] => {
+  const isWorkSpaceId = (id: string | null): boolean => {
+    const space = id ? document.spaces[id] : undefined;
+
+    return Boolean(space && !space.deleted && isWorkSpace(space));
+  };
+  const isWorkBlock = (block: TodayBlock): boolean => block.id === 'team-waiting' || (block.id === 'backlog-pick' && isWorkSpaceId(document.settings.backlogSpaceId)) || (block.id.startsWith('space:') && isWorkSpaceId(block.id.slice('space:'.length)));
+
+  return todayBlocks(document).filter((block) => block.enabled && !(hideWork && isWorkBlock(block)));
 };

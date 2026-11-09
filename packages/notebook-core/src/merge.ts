@@ -19,7 +19,11 @@ const newer = <T extends Versioned>(left: T | undefined, right: T | undefined): 
   return tieBreak(left, right);
 };
 
-/** Equal timestamps: a deletion wins, otherwise a stable content order keeps merge commutative. */
+/**
+ * Equal timestamps: a deletion wins; then the copy with fewer empty (null) fields, because an older app version
+ * re-saves entities without the fields it doesn't know and they come back as null; then a stable content order.
+ * Every step is symmetric, so merge stays commutative.
+ */
 const tieBreak = <T extends Versioned>(left: T, right: T): T => {
   const leftDeleted = left.deleted === true;
   const rightDeleted = right.deleted === true;
@@ -28,8 +32,17 @@ const tieBreak = <T extends Versioned>(left: T, right: T): T => {
     return leftDeleted ? left : right;
   }
 
+  const leftEmpty = emptyFields(left);
+  const rightEmpty = emptyFields(right);
+
+  if (leftEmpty !== rightEmpty) {
+    return leftEmpty < rightEmpty ? left : right;
+  }
+
   return JSON.stringify(right) > JSON.stringify(left) ? right : left;
 };
+
+const emptyFields = (entity: object): number => Object.values(entity).filter((value) => value === null).length;
 
 const mergeRecords = <T extends Versioned>(left: Record<string, T>, right: Record<string, T>): Record<string, T> => {
   const ids = new Set([...Object.keys(left), ...Object.keys(right)]);

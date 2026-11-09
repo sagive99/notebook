@@ -6,7 +6,7 @@ import { createLocalStore } from '../adapters/local-store';
 import type { AppConfig } from '../config';
 import { safeStorage } from '../platform/safe-storage';
 import type { AuthPort, CalendarGateway, MailGateway } from '../ports';
-import { SHOWN_CALENDARS_KEY, SYNC_INTERVAL_MS } from './app-services.consts';
+import { SHOWN_CALENDARS_KEY, SYNC_INTERVAL_MS, WORK_CALENDARS_KEY, WORK_HIDDEN_KEY } from './app-services.consts';
 import { CalendarSync } from './calendar-sync';
 import { NotebookStore } from './notebook-store';
 
@@ -26,6 +26,12 @@ export type AppServices = {
   calendarsGranted: () => boolean;
   shownCalendars: () => string[];
   setShownCalendars: (calendarIds: string[]) => void;
+  /** Calendars marked as work on this device; their events hide while Work is switched off. */
+  workCalendars: () => string[];
+  setWorkCalendars: (calendarIds: string[]) => void;
+  /** Whether Work is switched off on Today, remembered per device. */
+  workHidden: () => boolean;
+  setWorkHidden: (hidden: boolean) => void;
   disconnect: () => Promise<void>;
   dispose: () => void;
 };
@@ -95,6 +101,14 @@ export const createAppServices = (config: AppConfig): AppServices => {
     shownCalendars: () => (safeStorage.get(SHOWN_CALENDARS_KEY) ?? 'primary').split('\n').filter(Boolean),
     setShownCalendars: (calendarIds) => {
       safeStorage.set(SHOWN_CALENDARS_KEY, calendarIds.join('\n'));
+    },
+    workCalendars: () => (safeStorage.get(WORK_CALENDARS_KEY) ?? '').split('\n').filter(Boolean),
+    setWorkCalendars: (calendarIds) => {
+      safeStorage.set(WORK_CALENDARS_KEY, calendarIds.join('\n'));
+    },
+    workHidden: () => safeStorage.get(WORK_HIDDEN_KEY) === '1',
+    setWorkHidden: (hidden) => {
+      safeStorage.set(WORK_HIDDEN_KEY, hidden ? '1' : '0');
     },
     disconnect: async () => {
       await auth?.disconnect();

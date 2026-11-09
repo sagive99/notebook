@@ -1,4 +1,4 @@
-import { addSpace, deleteSpace, updateSpace } from '@notebook/core';
+import { addSpace, deleteSpace, isWorkSpace, updateSpace } from '@notebook/core';
 import type { BoardColumn, SpaceColor, SpaceFields, SpaceLayout } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
@@ -34,6 +34,9 @@ export const SpaceFormScreen = ({ id }: { id?: string }) => {
   const [fields, setFields] = useState<SpaceFields>(existing?.fields ?? { dueDate: true, person: false, priority: false, link: false, tags: false });
   const [columns, setColumns] = useState<BoardColumn[]>(existing?.columns ?? []);
   const [showOnToday, setShowOnToday] = useState(existing?.showOnToday ?? false);
+  // Null keeps the default rule (People-layout spaces are work) until the user chooses.
+  const [workChoice, setWorkChoice] = useState<boolean | null>(existing?.work ?? null);
+  const work = isWorkSpace({ work: workChoice, layout });
   const [inCapture, setInCapture] = useState(existing?.inCapture ?? true);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -49,14 +52,14 @@ export const SpaceFormScreen = ({ id }: { id?: string }) => {
     }
 
     if (existing) {
-      run((current, context) => updateSpace(current, existing.id, { name: name.trim(), color, fields, columns: columns.map((column) => ({ ...column, name: column.name.trim() })), showOnToday, inCapture }, context));
+      run((current, context) => updateSpace(current, existing.id, { name: name.trim(), color, fields, columns: columns.map((column) => ({ ...column, name: column.name.trim() })), showOnToday, work: workChoice, inCapture }, context));
       navigate({ name: 'space', id: existing.id });
 
       return;
     }
 
     const newId = crypto.randomUUID();
-    run((current, context) => addSpace(current, { id: newId, name, color, layout, fields, showOnToday, inCapture }, context).document);
+    run((current, context) => addSpace(current, { id: newId, name, color, layout, fields, showOnToday, work: workChoice, inCapture }, context).document);
     navigate({ name: 'space', id: newId });
   };
 
@@ -116,6 +119,7 @@ export const SpaceFormScreen = ({ id }: { id?: string }) => {
 
         <div class="settings-list">
           <div class="settings-row"><span class="settings-row__label">Show on Today<span class="settings-row__sub">Items with a day appear in your notebook</span></span><Toggle label="Show on Today" checked={showOnToday} onChange={setShowOnToday} /></div>
+          <div class="settings-row"><span class="settings-row__label">Work space<span class="settings-row__sub">Hidden on Today while Work is switched off</span></span><Toggle label="Work space" checked={work} onChange={setWorkChoice} /></div>
           <div class="settings-row"><span class="settings-row__label">Show in quick capture</span><Toggle label="Show in quick capture" checked={inCapture} onChange={setInCapture} /></div>
         </div>
 

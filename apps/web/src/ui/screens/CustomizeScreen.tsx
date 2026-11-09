@@ -76,6 +76,7 @@ const CalendarsSection = () => {
   const granted = auth.status === 'signed-in' && services.calendarsGranted();
   const { state } = useCalendarList(granted);
   const [shown, setShown] = useState(services.shownCalendars);
+  const [work, setWork] = useState(services.workCalendars);
   const [error, setError] = useState<string | null>(null);
 
   if (!services.calendar || auth.status !== 'signed-in') {
@@ -88,10 +89,18 @@ const CalendarsSection = () => {
     setShown(next);
   };
 
+  const toggleWork = (calendarId: string) => {
+    const next = work.includes(calendarId) ? work.filter((id) => id !== calendarId) : [...work, calendarId];
+    services.setWorkCalendars(next);
+    setWork(next);
+  };
+  const workChip = (calendarId: string, name: string) => <button type="button" class={`chip chip--small ${work.includes(calendarId) ? 'chip--selected' : ''}`} aria-pressed={work.includes(calendarId)} aria-label={`${name} is a work calendar`} onClick={() => toggleWork(calendarId)}>Work</button>;
+
   return (
     <div class="field">
       <SectionLabel>Calendars on Schedule</SectionLabel>
       <div class="settings-list">
+        {!granted ? <div class="settings-row"><span class="settings-row__label">Main calendar</span>{workChip('primary', 'Main calendar')}</div> : null}
         {!granted ? (
           <div class="settings-row"><span class="settings-row__label">Other calendars<span class="settings-row__sub">Show shared and subscribed calendars too</span></span>
             <button type="button" class="pill-button pill-button--small" onClick={() => {
@@ -105,11 +114,13 @@ const CalendarsSection = () => {
         {state.kind === 'ready' ? state.data.map((calendar) => (
           <div key={calendar.id} class="settings-row">
             <span class="settings-row__label" dir="auto">{calendar.name}</span>
+            {workChip(calendar.id, calendar.name)}
             <Toggle label={`Show ${calendar.name}`} checked={shown.includes(calendar.id)} onChange={(on) => toggle(calendar.id, on)} />
           </div>
         )) : null}
       </div>
       {error ? <p class="inline-error" role="alert">{error}</p> : null}
+      <p class="hint">Calendars marked <b>Work</b> are hidden on Today while Work is switched off. This is remembered on this phone.</p>
     </div>
   );
 };

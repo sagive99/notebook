@@ -297,3 +297,10 @@ mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 2px; 
 .checkbox { position: relative; }
 .legacy-now { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #f3f2ee; font-size: 14px; line-height: 19px; }
 .legacy-now__actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+/* Work switch on Today */
+.work-switch { height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.work-switch--on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.work-note { text-align: center; padding: 4px 12px; }
+.chip--small { height: 30px; padding: 0 10px; font-size: 12px; position: relative; }
+.chip--small::after { content: ''; position: absolute; inset: -7px 0; }
