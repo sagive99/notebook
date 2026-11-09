@@ -17,7 +17,7 @@ All Google access happens in the browser (ADR 0002). Long-lived refresh tokens r
 ## Decision
 
 - Use the Google Identity Services **token model** (`initTokenClient`) with the public web client ID. Tokens last about an hour; no refresh tokens and no client secret exist anywhere.
-- Base scopes, requested on Connect: `drive.appdata` and `calendar.events`. `gmail.readonly` is requested **incrementally**, only when the user enables the Gmail block.
+- Base scopes, requested on Connect: `drive.appdata` and `calendar.events`. `gmail.readonly` is requested **incrementally**, only when the user enables the Gmail block; `calendar.calendarlist.readonly` likewise, only when the user taps Choose under Customize → Calendars on Schedule.
 - Cache the current access token, its expiry, and granted scopes in `localStorage` until one minute before expiry, so reopening the app within the hour needs no tap. After expiry the app keeps working on the device copy and shows a one-tap Reconnect. A 401 from Google clears the cached token.
 - Calls that may open Google's popup run only from user gestures (Connect, Reconnect, Allow).
 - Disconnect revokes the token and clears the cache.

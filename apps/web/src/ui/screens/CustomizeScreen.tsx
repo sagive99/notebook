@@ -1,7 +1,7 @@
 import { liveSpaces, todayBlocks, updateSettings } from '@notebook/core';
 import type { NotebookDocument, TodayBlock, TodayBlockId } from '@notebook/core';
 import { useState } from 'preact/hooks';
-import { useAuthState, useNotebook, useServices } from '../../state/hooks';
+import { useAuthState, useCalendarList, useNotebook, useServices } from '../../state/hooks';
 import { ScreenHeader, SyncDot } from '../components/chrome';
 import { SectionLabel, Toggle } from '../components/primitives';
 import { ArrowDownIcon, ArrowUpIcon } from '../icons';
@@ -70,6 +70,50 @@ const AccountSection = () => {
   );
 };
 
+const CalendarsSection = () => {
+  const services = useServices();
+  const auth = useAuthState();
+  const granted = auth.status === 'signed-in' && services.calendarsGranted();
+  const { state } = useCalendarList(granted);
+  const [shown, setShown] = useState(services.shownCalendars);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!services.calendar || auth.status !== 'signed-in') {
+    return null;
+  }
+
+  const toggle = (calendarId: string, on: boolean) => {
+    const next = on ? [...shown, calendarId] : shown.filter((id) => id !== calendarId);
+    services.setShownCalendars(next);
+    setShown(next);
+  };
+
+  return (
+    <div class="field">
+      <SectionLabel>Calendars on Schedule</SectionLabel>
+      <div class="settings-list">
+        {!granted ? (
+          <div class="settings-row"><span class="settings-row__label">Other calendars<span class="settings-row__sub">Show shared and subscribed calendars too</span></span>
+            <button type="button" class="pill-button pill-button--small" onClick={() => {
+              setError(null);
+              services.connectCalendars().catch((failure: unknown) => setError(failure instanceof Error ? failure.message : 'Something went wrong.'));
+            }}>Choose</button>
+          </div>
+        ) : null}
+        {state.kind === 'loading' ? <p class="settings-row settings-row--text">Loading…</p> : null}
+        {state.kind === 'error' ? <p class="settings-row settings-row--text">{state.message}</p> : null}
+        {state.kind === 'ready' ? state.data.map((calendar) => (
+          <div key={calendar.id} class="settings-row">
+            <span class="settings-row__label" dir="auto">{calendar.name}</span>
+            <Toggle label={`Show ${calendar.name}`} checked={shown.includes(calendar.id)} onChange={(on) => toggle(calendar.id, on)} />
+          </div>
+        )) : null}
+      </div>
+      {error ? <p class="inline-error" role="alert">{error}</p> : null}
+    </div>
+  );
+};
+
 export const CustomizeScreen = () => {
   const { document, run } = useNotebook();
   const blocks = todayBlocks(document);
@@ -133,6 +177,8 @@ export const CustomizeScreen = () => {
             }}><option value="">None</option>{spaces.filter((space) => space.layout === 'list').map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}</select></label>
           </div>
         </div>
+
+        <CalendarsSection />
 
         <AccountSection />
       </div>

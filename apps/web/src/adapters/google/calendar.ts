@@ -1,14 +1,11 @@
 import { addDays, atClockTime, toClockTime, toIsoDate } from '@notebook/core';
 import type { IsoDate } from '@notebook/core';
 import { z } from 'zod';
-import type { CalendarEvent, CalendarGateway, NewCalendarEvent } from '../../ports';
+import type { CalendarEvent, CalendarGateway, CalendarInfo, NewCalendarEvent } from '../../ports';
 import { SCOPES } from './auth';
 import type { GoogleAuth } from './auth';
+import { API, DEFAULT_DURATION_MINUTES, ITEM_PROPERTY, PRIMARY, WRITABLE_ROLES } from './calendar.consts';
 import { GoogleApiError, googleFetch } from './http';
-
-const API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
-const DEFAULT_DURATION_MINUTES = 30;
-const ITEM_PROPERTY = 'notebookItemId';
 
 const eventSchema = z.object({
   id: z.string().min(1),
@@ -23,18 +20,27 @@ const eventSchema = z.object({
   organizer: z.object({ self: z.boolean().optional() }).optional(),
 });
 
-const listSchema = z.object({ items: z.array(eventSchema).default([]), nextPageToken: z.string().optional() });
+const listSchema = z.object({ summary: z.string().optional(), accessRole: z.string().optional(), items: z.array(eventSchema).default([]) });
+
+const calendarListSchema = z.object({
+  items: z.array(z.object({ id: z.string().min(1), summary: z.string().optional(), summaryOverride: z.string().optional(), primary: z.boolean().optional() })).default([]),
+});
 
 type GoogleEvent = z.infer<typeof eventSchema>;
 
-const toCalendarEvent = (event: GoogleEvent): CalendarEvent => {
+const eventsUrl = (calendarId: string, eventId?: string): string => `${API}/calendars/${encodeURIComponent(calendarId)}/events${eventId ? `/${encodeURIComponent(eventId)}` : ''}`;
+
+const isGone = (error: unknown): boolean => error instanceof GoogleApiError && (error.status === 404 || error.status === 410);
+
+const toCalendarEvent = (event: GoogleEvent, calendarId = PRIMARY, calendarName: string | null = null, writable = true): CalendarEvent => {
   const allDay = event.start.dateTime === undefined;
   const start = event.start.dateTime ? new Date(event.start.dateTime) : null;
   const end = event.end?.dateTime ? new Date(event.end.dateTime) : null;
 
   return {
     id: event.id,
-    calendarId: 'primary',
+    calendarId,
+    calendarName,
     title: event.summary?.trim() || '(No title)',
     day: start ? toIsoDate(start) : event.start.date ?? '',
     start: start ? toClockTime(start) : null,
@@ -42,7 +48,7 @@ const toCalendarEvent = (event: GoogleEvent): CalendarEvent => {
     allDay,
     notebookItemId: event.extendedProperties?.private?.[ITEM_PROPERTY] ?? null,
     htmlLink: event.htmlLink ?? null,
-    editable: event.organizer?.self !== false,
+    editable: writable && event.organizer?.self !== false,
     updated: event.updated ?? new Date(0).toISOString(),
   };
 };
@@ -63,23 +69,46 @@ const toGoogleEvent = (event: NewCalendarEvent): Record<string, unknown> => {
   return { summary: event.title, ...timing, ...(reminders ? { reminders } : {}), ...(extendedProperties ? { extendedProperties } : {}) };
 };
 
-/** Two-way access to the user's primary Google Calendar, which iPhone Calendar mirrors when the account is added in iOS Settings. */
+/** Reads the calendars the user picked and writes to primary; iPhone Calendar mirrors them when the account is added in iOS Settings. */
 export class GoogleCalendarGateway implements CalendarGateway {
   constructor(private readonly auth: GoogleAuth) {}
 
-  async listDay(day: IsoDate): Promise<CalendarEvent[]> {
+  async listCalendars(): Promise<CalendarInfo[]> {
+    const response = await googleFetch(this.auth, SCOPES.calendarList, `${API}/users/me/calendarList`);
+
+    return calendarListSchema.parse(await response.json()).items.map((entry) => ({
+      id: entry.primary ? PRIMARY : entry.id,
+      name: entry.summaryOverride ?? entry.summary ?? entry.id,
+      primary: entry.primary ?? false,
+    }));
+  }
+
+  async listDay(day: IsoDate, calendarIds: ReadonlyArray<string> = [PRIMARY]): Promise<CalendarEvent[]> {
     const timeMin = atClockTime(day, '00:00').toISOString();
     const timeMax = atClockTime(addDays(day, 1), '00:00').toISOString();
     const query = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '100' });
-    const response = await googleFetch(this.auth, SCOPES.calendar, `${API}?${query.toString()}`);
-    const listing = listSchema.parse(await response.json());
+    const listOne = async (calendarId: string): Promise<CalendarEvent[]> => {
+      const response = await googleFetch(this.auth, SCOPES.calendar, `${eventsUrl(calendarId)}?${query.toString()}`);
+      const listing = listSchema.parse(await response.json());
+      const writable = WRITABLE_ROLES.includes(listing.accessRole ?? 'owner');
+      const name = calendarId === PRIMARY ? null : listing.summary ?? null;
 
-    return listing.items.filter((event) => event.status !== 'cancelled').map(toCalendarEvent);
+      return listing.items.filter((event) => event.status !== 'cancelled').map((event) => toCalendarEvent(event, calendarId, name, writable));
+    };
+    const lists = await Promise.all(calendarIds.map((calendarId) => (calendarId === PRIMARY ? listOne(calendarId) : listOne(calendarId).catch((error: unknown) => {
+      if (isGone(error) || (error instanceof GoogleApiError && error.status === 403)) {
+        return [];
+      }
+
+      throw error;
+    }))));
+
+    return lists.flat().sort((a, b) => Number(b.allDay) - Number(a.allDay) || (a.start ?? '').localeCompare(b.start ?? ''));
   }
 
   async get(eventId: string): Promise<CalendarEvent | null> {
-    const response = await googleFetch(this.auth, SCOPES.calendar, `${API}/${encodeURIComponent(eventId)}`).catch((error: unknown) => {
-      if (error instanceof GoogleApiError && (error.status === 404 || error.status === 410)) {
+    const response = await googleFetch(this.auth, SCOPES.calendar, eventsUrl(PRIMARY, eventId)).catch((error: unknown) => {
+      if (isGone(error)) {
         return null;
       }
 
@@ -96,21 +125,21 @@ export class GoogleCalendarGateway implements CalendarGateway {
   }
 
   async create(event: NewCalendarEvent): Promise<CalendarEvent> {
-    const response = await googleFetch(this.auth, SCOPES.calendar, API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toGoogleEvent(event)) });
+    const response = await googleFetch(this.auth, SCOPES.calendar, eventsUrl(PRIMARY), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toGoogleEvent(event)) });
 
     return toCalendarEvent(eventSchema.parse(await response.json()));
   }
 
-  async update(eventId: string, event: NewCalendarEvent): Promise<CalendarEvent> {
-    const response = await googleFetch(this.auth, SCOPES.calendar, `${API}/${encodeURIComponent(eventId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toGoogleEvent(event)) });
+  async update(eventId: string, event: NewCalendarEvent, calendarId = PRIMARY): Promise<CalendarEvent> {
+    const response = await googleFetch(this.auth, SCOPES.calendar, eventsUrl(calendarId, eventId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toGoogleEvent(event)) });
 
-    return toCalendarEvent(eventSchema.parse(await response.json()));
+    return toCalendarEvent(eventSchema.parse(await response.json()), calendarId);
   }
 
-  async remove(eventId: string): Promise<void> {
-    await googleFetch(this.auth, SCOPES.calendar, `${API}/${encodeURIComponent(eventId)}`, { method: 'DELETE' }).catch((error: unknown) => {
+  async remove(eventId: string, calendarId = PRIMARY): Promise<void> {
+    await googleFetch(this.auth, SCOPES.calendar, eventsUrl(calendarId, eventId), { method: 'DELETE' }).catch((error: unknown) => {
       // Already deleted in Google Calendar: the goal is reached.
-      if (error instanceof GoogleApiError && (error.status === 404 || error.status === 410)) {
+      if (isGone(error)) {
         return;
       }
 

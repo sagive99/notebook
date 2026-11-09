@@ -1,6 +1,6 @@
 import type { NotebookDocument } from '@notebook/core';
 import { ConflictError } from '../ports';
-import type { CalendarEvent, CalendarGateway, LocalDocumentStore, NewCalendarEvent, RemoteDocumentStore, StoredDocument } from '../ports';
+import type { CalendarEvent, CalendarGateway, CalendarInfo, LocalDocumentStore, NewCalendarEvent, RemoteDocumentStore, StoredDocument } from '../ports';
 
 export const memoryLocalStore = (): LocalDocumentStore & { saved: NotebookDocument | null } => {
   const state = { saved: null as NotebookDocument | null };
@@ -73,6 +73,10 @@ export class FakeCalendar implements CalendarGateway {
   private counter = 0;
   private clock = 0;
 
+  async listCalendars(): Promise<CalendarInfo[]> {
+    return [{ id: 'primary', name: 'Me', primary: true }];
+  }
+
   async listDay(day: string): Promise<CalendarEvent[]> {
     return [...this.events.values()].filter((event) => event.day === day);
   }
@@ -114,7 +118,7 @@ export class FakeCalendar implements CalendarGateway {
   }
 
   private toEvent(id: string, event: NewCalendarEvent): CalendarEvent {
-    return { id, calendarId: 'primary', title: event.title, day: event.day, start: event.start, end: event.end, allDay: event.start === null, notebookItemId: event.notebookItemId, htmlLink: null, editable: true, updated: new Date(0).toISOString() };
+    return { id, calendarId: 'primary', calendarName: null, title: event.title, day: event.day, start: event.start, end: event.end, allDay: event.start === null, notebookItemId: event.notebookItemId, htmlLink: null, editable: true, updated: new Date(0).toISOString() };
   }
 }
 
