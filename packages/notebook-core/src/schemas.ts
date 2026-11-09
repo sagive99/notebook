@@ -114,6 +114,11 @@ export const settingsSchema = z.object({
   backlogSpaceId: z.string().max(64).nullable().default(null),
   teamSpaceId: z.string().max(64).nullable().default(null),
   /**
+   * Whether "reminder" items also get a Google Calendar event. null means the default (yes), so an older
+   * app version that drops the field falls back to the original behaviour rather than to a wrong value.
+   */
+  calendarForReminders: z.boolean().nullable().default(null),
+  /**
    * Today blocks folded down to their header. Added after v1, hence the default. An older app version drops it when it
    * saves settings; accepted: the blocks open again.
    */

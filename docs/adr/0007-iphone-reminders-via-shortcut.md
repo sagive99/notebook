@@ -20,6 +20,7 @@ An opt-in, device-local handoff to an iPhone Shortcut named "Notebook Reminder",
 - The payload is `{"action":"add","tag":"notebook:<itemId>","title":…,"due":"YYYY-MM-DDTHH:MM:00+HH:MM"}` or `{"action":"remove","tag":…}`. The Shortcut removes reminders whose notes contain the tag, then adds the new one with an alert at `due` and the tag in its notes.
 - A day with no time gets an alert at 08:30.
 - What was last sent per item is kept in `localStorage` (`notebook.reminders.sent`), so unchanged saves don't open Shortcuts. The on/off switch is `notebook.reminders.shortcut`. Neither key syncs.
+- A synced setting, `Settings.calendarForReminders` (null means on), can keep reminder items out of Google Calendar so they live only in Reminders. Turning it off removes the events of reminders from today on, and turning it on recreates them. Past events are left alone.
 - The handoff is one-way. The notebook never reads Reminders, and Google Calendar stays the synced record.
 
 ## Alternatives considered

@@ -1,4 +1,4 @@
-import { addDays, deleteItem, liveSpaces, livePeople, scheduleItem, toIsoDate, updateItem } from '@notebook/core';
+import { addDays, deleteItem, liveSpaces, livePeople, remindersUseCalendar, scheduleItem, toIsoDate, updateItem } from '@notebook/core';
 import type { ItemKind, ItemPatch, Priority } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
@@ -129,8 +129,8 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
           ) : null}
           {draft.day ? (
             <div class="settings-row">
-              <span class="settings-row__label">Calendar + reminder</span>
-              <Toggle label="Calendar + reminder" checked={Boolean(draft.remind)} onChange={(value) => set({ remind: value })} />
+              <span class="settings-row__label">{remindersUseCalendar(document.settings) ? 'Calendar + reminder' : 'Reminder'}</span>
+              <Toggle label={remindersUseCalendar(document.settings) ? 'Calendar + reminder' : 'Reminder'} checked={Boolean(draft.remind)} onChange={(value) => set({ remind: value })} />
             </div>
           ) : null}
           {fields.person || draft.personId ? (
