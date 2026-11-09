@@ -1,4 +1,4 @@
-import { updateItem } from '@notebook/core';
+import { compareIsoDates, remindersUseCalendar, toIsoDate, updateItem } from '@notebook/core';
 import type { IsoDate, Item, NotebookDocument } from '@notebook/core';
 import { safeStorage } from '../platform/safe-storage';
 import { AuthRequiredError } from '../ports';
@@ -12,9 +12,12 @@ const CHANGES_SINCE_KEY = 'notebook.calendar.changesSince';
 const FIRST_LOOKBACK_MS = 7 * 24 * 60 * 60_000;
 const OVERLAP_MS = 60_000;
 
-/** The calendar event an item should have: only items marked "Calendar + reminder" with a day get one. */
-export const eventForItem = (item: Item): NewCalendarEvent | null => {
-  if (item.deleted || !item.remind || item.day === null || item.text.trim() === '') {
+/**
+ * The calendar event an item should have: only reminder items with a day get one, and none at all
+ * when the user keeps reminders out of Google Calendar (Settings.calendarForReminders).
+ */
+export const eventForItem = (item: Item, useCalendar = true): NewCalendarEvent | null => {
+  if (!useCalendar || item.deleted || !item.remind || item.day === null || item.text.trim() === '') {
     return null;
   }
 
@@ -186,12 +189,20 @@ export class CalendarSync {
       return;
     }
 
+    const useCalendar = remindersUseCalendar(after.settings);
+    // Turning the calendar on or off for reminders re-checks reminders from today on, so their events are removed or
+    // created; past ones keep their calendar history.
+    const switched = useCalendar !== remindersUseCalendar(before.settings);
+    const today = toIsoDate(new Date());
+
     for (const [id, item] of Object.entries(after.items)) {
-      if (before.items[id] === item) {
+      const recheck = switched && item.day !== null && compareIsoDates(item.day, today) >= 0;
+
+      if (before.items[id] === item && !recheck) {
         continue;
       }
 
-      const wanted = eventForItem(item);
+      const wanted = eventForItem(item, useCalendar);
       const needsPush = wanted ? item.calendarEventId === null || this.pushed.get(id) !== signature(wanted) : item.calendarEventId !== null;
 
       if (needsPush) {
@@ -232,7 +243,7 @@ export class CalendarSync {
   }
 
   private async pushItem(gateway: CalendarGateway, id: string, item: Item | undefined): Promise<void> {
-    const wanted = item ? eventForItem(item) : null;
+    const wanted = item ? eventForItem(item, remindersUseCalendar(this.store.getSnapshot().document.settings)) : null;
     const eventId = item?.calendarEventId ?? null;
 
     if (!wanted) {

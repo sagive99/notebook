@@ -1,4 +1,4 @@
-import { liveSpaces, todayBlocks, updateSettings } from '@notebook/core';
+import { liveSpaces, remindersUseCalendar, todayBlocks, updateSettings } from '@notebook/core';
 import type { NotebookDocument, TodayBlock, TodayBlockId } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useAuthState, useCalendarList, useNotebook, useServices } from '../../state/hooks';
@@ -127,11 +127,13 @@ const CalendarsSection = () => {
 };
 
 const RemindersSection = () => {
+  const { document, run } = useNotebook();
   const [enabled, setEnabled] = useState(remindersEnabled);
+  const useCalendar = remindersUseCalendar(document.settings);
 
   return (
     <div class="field">
-      <SectionLabel>iPhone Reminders</SectionLabel>
+      <SectionLabel>Reminders</SectionLabel>
       <div class="settings-list">
         <div class="settings-row">
           <span class="settings-row__label">Also add to the Reminders app<span class="settings-row__sub">Through the “{SHORTCUT_NAME}” shortcut</span></span>
@@ -140,6 +142,10 @@ const RemindersSection = () => {
             setEnabled(on);
           }} />
         </div>
+        <div class="settings-row">
+          <span class="settings-row__label">Also put reminders in Google Calendar<span class="settings-row__sub">On every device. Turning it off removes the events of upcoming reminders</span></span>
+          <Toggle label="Also put reminders in Google Calendar" checked={useCalendar} onChange={(on) => run((current, context) => updateSettings(current, { calendarForReminders: on }, context))} />
+        </div>
         {enabled ? (
           <div class="settings-row">
             <span class="settings-row__label">Check the shortcut<span class="settings-row__sub">Adds a test reminder for 2 minutes from now</span></span>
@@ -147,7 +153,7 @@ const RemindersSection = () => {
           </div>
         ) : null}
       </div>
-      <p class="hint">Items with <b>Calendar + reminder</b> are handed to the shortcut when you save them, so the Shortcuts app opens for a moment; tap “‹ Notebook” at the top left to come back. Checking a reminder off in Reminders doesn’t check it off here. Remembered on this phone.</p>
+      <p class="hint">Items with <b>{useCalendar ? 'Calendar + reminder' : 'Reminder'}</b> are handed to the shortcut when you save them, so the Shortcuts app opens for a moment; tap “‹ Notebook” at the top left to come back. Checking a reminder off in Reminders doesn’t check it off here. Remembered on this phone.</p>
       {enabled ? (
         <details class="setup-steps">
           <summary>Set up the shortcut (once)</summary>
