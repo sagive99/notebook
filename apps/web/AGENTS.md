@@ -21,7 +21,7 @@ Inherits the root [AGENTS.md](../../AGENTS.md) and [standards](../../docs/STANDA
 - Sheets edit a draft and apply on Save. Destructive actions ask for confirmation inline.
 - Google popups (`connect`, `connectGmail`) only from click handlers.
 - New screens get a hash route in `router.ts` and a bottom-nav mapping in `components/chrome.tsx`.
-- App shell (iOS home-screen apps strand fixed bars after an input zooms the viewport): the page never scrolls, only `<main class="app-main">` does. No `position: fixed` and no `window.scrollTo` in screens; bottom actions use `CaptureBar` (sticky inside the scroller). Form controls stay at 16px or larger so iOS doesn't zoom on focus.
+- App shell (iOS home-screen apps strand fixed bars after an input zooms the viewport): the page never scrolls, only `<main class="app-main">` does. No `position: fixed` and no `window.scrollTo` in screens; bottom actions use `CaptureBar` (sticky inside the scroller). Form controls stay at 16px or larger so iOS doesn't zoom on focus. `platform/viewport.ts` sizes the shell to the visible viewport (`--app-height`) and undoes the page shift iOS leaves after the keyboard closes; it is the only code allowed to scroll the window.
 
 ## Checks
 
