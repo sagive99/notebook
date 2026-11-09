@@ -51,6 +51,8 @@ export type NewCalendarEvent = {
   notebookItemId: string | null;
 };
 
+export type CalendarChanges = { events: CalendarEvent[]; deletedIds: string[] };
+
 export type CalendarInfo = {
   id: string;
   name: string;
@@ -60,6 +62,8 @@ export type CalendarInfo = {
 export type CalendarGateway = {
   listCalendars: () => Promise<CalendarInfo[]>;
   listDay: (day: IsoDate, calendarIds?: ReadonlyArray<string>) => Promise<CalendarEvent[]>;
+  /** Events in the main calendar changed at or after `since` (ISO), with the ids of ones deleted since then. */
+  listChanged: (since: string) => Promise<CalendarChanges>;
   /** One event by id, or null when it was deleted or cancelled. */
   get: (eventId: string) => Promise<CalendarEvent | null>;
   create: (event: NewCalendarEvent) => Promise<CalendarEvent>;

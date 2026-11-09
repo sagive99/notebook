@@ -2,6 +2,7 @@ import { addDays, addItem, defaultCaptureTarget, liveSpaces, livePeople, parseCa
 import type { IsoDate, ItemKind } from '@notebook/core';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useNotebook, useServices } from '../../state/hooks';
+import { openShortcut, reminderHandoff } from '../../state/reminders-handoff';
 import { Chip, SectionLabel, Sheet, SheetHeader, Toggle } from '../components/primitives';
 import { relativeDay } from '../format';
 import { BellIcon, PersonIcon } from '../icons';
@@ -56,7 +57,9 @@ export const CaptureSheet = ({ preset = {}, onClose }: { preset?: CapturePreset;
     const space = spaceId ? document.spaces[spaceId] : undefined;
     const columnId = preset.columnId ?? (space?.layout === 'board' ? space.columns[0]?.id ?? null : null);
 
-    run((current, context) => addItem(current, {
+    let handoff: string | null = null;
+    run((current, context) => {
+      const added = addItem(current, {
       kind,
       text: parsed.text,
       day: effectiveDay ?? null,
@@ -67,8 +70,13 @@ export const CaptureSheet = ({ preset = {}, onClose }: { preset?: CapturePreset;
       personId: effectivePerson,
       tags: parsed.tags,
       sourceEmailId: preset.sourceEmailId ?? null,
-    }, context).document);
+      }, context);
+      handoff = reminderHandoff(added.item.id, added.item);
+
+      return added.document;
+    });
     onClose();
+    openShortcut(handoff);
   };
 
   const dayChoices: IsoDate[] = [today, addDays(today, 1)];

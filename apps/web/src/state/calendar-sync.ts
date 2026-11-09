@@ -7,6 +7,10 @@ import type { ChangeSource, NotebookStore } from './notebook-store';
 
 const PENDING_KEY = 'notebook.calendar.pending';
 const PUSHED_KEY = 'notebook.calendar.pushed';
+const CHANGES_SINCE_KEY = 'notebook.calendar.changesSince';
+/** How far back the first check looks, and the overlap kept between checks so an edit landing mid-request isn't missed. */
+const FIRST_LOOKBACK_MS = 7 * 24 * 60 * 60_000;
+const OVERLAP_MS = 60_000;
 
 /** The calendar event an item should have: only items marked "Calendar + reminder" with a day get one. */
 export const eventForItem = (item: Item): NewCalendarEvent | null => {
@@ -123,6 +127,44 @@ export class CalendarSync {
       this.applyCalendarEdit(item, event);
     }
 
+    this.persist();
+  }
+
+  /**
+   * Applies calendar-side edits to linked items on any day, not only the day on screen: asks the
+   * calendar what changed since the last check (device-local cursor) and runs each linked event
+   * through the same rules as reconcileDay. Called on every sync tick and when the app comes back.
+   */
+  async reconcileChanges(now: Date = new Date()): Promise<void> {
+    const gateway = this.gateway;
+
+    if (!gateway) {
+      return;
+    }
+
+    const since = safeStorage.get(CHANGES_SINCE_KEY) ?? new Date(now.getTime() - FIRST_LOOKBACK_MS).toISOString();
+    const nextSince = new Date(now.getTime() - OVERLAP_MS).toISOString();
+    const changes = await gateway.listChanged(since);
+    const linked = (eventId: string): Item | undefined => Object.values(this.store.getSnapshot().document.items).find((item) => !item.deleted && item.calendarEventId === eventId && !this.pending.has(item.id));
+
+    for (const event of changes.events) {
+      const item = linked(event.id);
+
+      if (item) {
+        this.applyCalendarEdit(item, event);
+      }
+    }
+
+    for (const eventId of changes.deletedIds) {
+      const item = linked(eventId);
+
+      if (item) {
+        this.pushed.delete(item.id);
+        this.store.run((current, context) => updateItem(current, item.id, { remind: false, calendarEventId: null }, context));
+      }
+    }
+
+    safeStorage.set(CHANGES_SINCE_KEY, nextSince);
     this.persist();
   }
 

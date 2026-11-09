@@ -2,6 +2,8 @@ import { addDays, deleteItem, liveSpaces, livePeople, scheduleItem, toIsoDate, u
 import type { ItemKind, ItemPatch, Priority } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
+import type { Command } from '../../state/notebook-store';
+import { openShortcut, reminderHandoff } from '../../state/reminders-handoff';
 import { Chip, SectionLabel, Sheet, SheetHeader, Toggle } from '../components/primitives';
 
 const KINDS: Array<{ kind: ItemKind; label: string }> = [{ kind: 'task', label: 'Task' }, { kind: 'note', label: 'Note' }, { kind: 'idea', label: 'Idea' }];
@@ -31,6 +33,18 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
   const today = toIsoDate(new Date());
   const space = draft.spaceId ? document.spaces[draft.spaceId] : undefined;
   const fields = space?.fields ?? { dueDate: true, person: true, priority: true, link: true, tags: true };
+  /** Runs a change to this item, then hands its reminder to the iPhone Shortcut if that changed. Call only from a tap. */
+  const apply = (change: Command) => {
+    let handoff: string | null = null;
+    run((current, context) => {
+      const next = change(current, context);
+      handoff = reminderHandoff(id, next.items[id]);
+
+      return next;
+    });
+    onClose();
+    openShortcut(handoff);
+  };
   const set = (patch: ItemPatch) => setDraft((current) => ({ ...current, ...patch }));
   const linkValue = draft.link ?? '';
   const linkInvalid = linkValue.trim() !== '' && safeLink(linkValue.trim()) === null;
@@ -47,18 +61,15 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
       remind: Boolean(draft.remind) && Boolean(draft.day),
       columnId: space?.layout === 'board' ? draft.columnId ?? space.columns[0]?.id ?? null : null,
     };
-    run((current, context) => updateItem(current, id, patch, context));
-    onClose();
+    apply((current, context) => updateItem(current, id, patch, context));
   };
 
   const moveTo = (patch: ItemPatch) => {
-    run((current, context) => updateItem(current, id, { ...patch, text: (draft.text ?? item.text).trim() }, context));
-    onClose();
+    apply((current, context) => updateItem(current, id, { ...patch, text: (draft.text ?? item.text).trim() }, context));
   };
 
   const scheduleFor = (day: string) => {
-    run((current, context) => scheduleItem(updateItem(current, id, { text: (draft.text ?? item.text).trim() }, context), id, day, context));
-    onClose();
+    apply((current, context) => scheduleItem(updateItem(current, id, { text: (draft.text ?? item.text).trim() }, context), id, day, context));
   };
 
   return (
@@ -160,8 +171,7 @@ export const ItemSheet = ({ id, onClose }: { id: string; onClose: () => void }) 
             <>
               <span>Delete this {item.kind}{item.calendarEventId ? ' and its calendar event' : ''}?</span>
               <button type="button" class="danger-button" onClick={() => {
-                run((current, context) => deleteItem(current, id, context));
-                onClose();
+                apply((current, context) => deleteItem(current, id, context));
               }}>Delete</button>
               <button type="button" class="link-button" onClick={() => setConfirmDelete(false)}>Keep</button>
             </>
