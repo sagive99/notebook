@@ -2,7 +2,7 @@ import { moveTaskOnPeopleBoard, resolveLegacyNow, setItemOngoing, teamTasks, toI
 import type { IsoDate, Item, PersonTasks } from '@notebook/core';
 import { useMemo, useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
-import { AVATAR_TONES, initials, relativeDay } from '../format';
+import { initials, personTone, relativeDay } from '../format';
 import { CheckIcon, GripIcon, PauseIcon, PlayIcon } from '../icons';
 import { useSheets } from '../sheets/sheet-context';
 import { Empty } from './primitives';
@@ -97,7 +97,7 @@ export const PeopleBoard = ({ today, spaceId }: { today: IsoDate; spaceId: strin
       {team.length > 0 && shown.length === 0 ? <Empty>Nobody here right now.</Empty> : null}
       {shown.map((entry, index) => {
         const { person, ongoing, next } = entry;
-        const tone = AVATAR_TONES[index % AVATAR_TONES.length];
+        const tone = personTone(person, index);
         const overOngoing = drag?.personId === person.id && drag.target?.zone === 'ongoing';
         const overNext = drag?.personId === person.id && drag.target?.zone === 'next';
 

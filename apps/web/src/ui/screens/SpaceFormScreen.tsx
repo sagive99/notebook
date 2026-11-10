@@ -3,7 +3,7 @@ import type { BoardColumn, SpaceColor, SpaceFields, SpaceLayout } from '@noteboo
 import { useState } from 'preact/hooks';
 import { useNotebook } from '../../state/hooks';
 import { ScreenHeader } from '../components/chrome';
-import { SectionLabel, Toggle } from '../components/primitives';
+import { ColorSwatches, SectionLabel, Toggle } from '../components/primitives';
 import { SPACE_COLORS, initials } from '../format';
 import { href, navigate } from '../router';
 
@@ -21,8 +21,6 @@ const FIELD_LABELS: Array<{ key: keyof SpaceFields; label: string }> = [
   { key: 'link', label: 'Link' },
   { key: 'tags', label: 'Tags' },
 ];
-
-const COLORS = Object.keys(SPACE_COLORS) as SpaceColor[];
 
 /** Creates a space, or edits one when an id is given. Layout is fixed after creation; everything else can change. */
 export const SpaceFormScreen = ({ id }: { id?: string }) => {
@@ -75,9 +73,7 @@ export const SpaceFormScreen = ({ id }: { id?: string }) => {
           <label class="field field--grow"><SectionLabel>Name</SectionLabel><input class="text-input text-input--large" dir="auto" maxLength={80} placeholder="e.g. Work projects" value={name} onInput={(event) => setName(event.currentTarget.value)} /></label>
         </div>
 
-        <div class="swatches" role="radiogroup" aria-label="Color">
-          {COLORS.map((option) => <button key={option} type="button" role="radio" aria-checked={color === option} aria-label={option} class={`swatch ${color === option ? 'swatch--selected' : ''}`} style={{ background: SPACE_COLORS[option].swatch }} onClick={() => setColor(option)} />)}
-        </div>
+        <ColorSwatches label="Color" value={color} onChange={setColor} />
 
         <div class="field">
           <SectionLabel>Layout{existing ? ' (fixed after creation)' : ''}</SectionLabel>

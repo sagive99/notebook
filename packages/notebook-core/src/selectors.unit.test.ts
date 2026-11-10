@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { addItem, addPerson, addSpace, createDocument, deleteSpace, setItemOngoing, toggleItemDone, updateSettings, updateSpace } from './document';
+import { addItem, addPerson, addSpace, createDocument, deletePerson, deleteSpace, setItemOngoing, setNotebookSectionCollapsed, setNotebookSectionColor, toggleItemDone, updateSettings, updateSpace } from './document';
 import { parseDocument } from './merge';
 import { mergeDocuments } from './merge';
-import { dayPage, isWorkEvent, isWorkSpace, liveItems, remindersUseCalendar, todayBlocks, visibleTodayBlocks, withoutWork } from './selectors';
+import { dayPage, isWorkEvent, isWorkSpace, liveItems, notebookSections, remindersUseCalendar, selfPersonId, todayBlocks, visibleTodayBlocks, withoutWork } from './selectors';
+import type { NotebookDocument } from './types';
 import { testContext } from './test-support';
 
 describe('dayPage', () => {
@@ -162,5 +163,45 @@ describe('reminders and Google Calendar', () => {
 
     expect(parsed.ok && remindersUseCalendar(parsed.document.settings)).toBe(true);
     expect(remindersUseCalendar({ calendarForReminders: false })).toBe(false);
+  });
+});
+
+describe('notebookSections', () => {
+  const build = () => {
+    const context = testContext();
+    const me = addPerson(createDocument(context), 'Me', context);
+    const or = addPerson(me.document, 'Or', context);
+    const guy = addPerson(or.document, 'Guy', context);
+    const guyTask = addItem(guy.document, { kind: 'task', text: 'guy today', day: '2026-11-09', personId: guy.person.id }, context);
+    const orOld = addItem(guyTask.document, { kind: 'task', text: 'or old', day: '2026-11-08', personId: or.person.id }, context);
+    const orOngoing = addItem(orOld.document, { kind: 'task', text: 'or ongoing', personId: or.person.id }, context);
+    const mineOld = addItem(setItemOngoing(orOngoing.document, orOngoing.item.id, true, context), { kind: 'task', text: 'my old', day: '2026-11-08', personId: me.person.id }, context);
+    const loose = addItem(mineOld.document, { kind: 'note', text: 'loose note', day: '2026-11-09' }, context);
+
+    return { context, document: loose.document, me: me.person, or: or.person };
+  };
+  const texts = (document: NotebookDocument) => notebookSections(document, dayPage(document, '2026-11-09', '2026-11-09')).map((section) => [section.id, section.items.map((item) => item.text)]);
+
+  it('splits the page into my carried tasks, my day, and the team by person', () => {
+    const { document } = build();
+
+    expect(texts(document)).toEqual([['carried', ['my old']], ['mine', ['loose note']], ['team', ['or ongoing', 'or old', 'guy today']]]);
+  });
+
+  it('uses the chosen "me" over the name, and ignores a removed one', () => {
+    const { context, document, me, or } = build();
+    const chosen = updateSettings(document, { selfPersonId: or.id }, context);
+
+    expect(selfPersonId(document)).toBe(me.id);
+    expect(texts(chosen)).toEqual([['carried', ['or old']], ['mine', ['or ongoing', 'loose note']], ['team', ['my old', 'guy today']]]);
+    expect(selfPersonId(deletePerson(chosen, or.id, context))).toBe(me.id);
+  });
+
+  it('reports folded sections and chosen colours, and leaves empty sections out', () => {
+    const { context, document } = build();
+    const styled = setNotebookSectionColor(setNotebookSectionCollapsed(document, 'team', true, context), 'team', 'rose', context);
+    const sections = notebookSections(styled, dayPage(styled, '2026-11-08', '2026-11-09'));
+
+    expect(sections.map(({ id, collapsed, color }) => ({ id, collapsed, color }))).toEqual([{ id: 'mine', collapsed: false, color: null }, { id: 'team', collapsed: true, color: 'rose' }]);
   });
 });

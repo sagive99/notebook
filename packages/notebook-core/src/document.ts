@@ -1,5 +1,6 @@
 import { DOCUMENT_VERSION } from './schemas';
 import type { BoardColumn, CommandContext, Item, ItemKind, NotebookDocument, Person, Settings, Space, SpaceColor, SpaceFields, SpaceLayout, TodayBlock, TodayBlockId } from './types';
+import type { NotebookSectionId } from './selectors';
 
 export const DEFAULT_TODAY_BLOCKS: TodayBlock[] = [
   { id: 'schedule', enabled: true },
@@ -62,6 +63,9 @@ export const createDocument = (context: CommandContext): NotebookDocument => {
       calendarForReminders: null,
       collapsedBlocks: [],
       dismissedEmails: [],
+      selfPersonId: null,
+      notebookCollapsedSections: [],
+      notebookSectionColors: {},
     },
   };
 };
@@ -217,13 +221,14 @@ export const addPerson = (document: NotebookDocument, name: string, context: Com
     nowUpdatedAt: null,
     blocked: false,
     notes: '',
+    color: null,
     order: nextOrder(Object.values(document.people)),
   };
 
   return { document: { ...document, people: { ...document.people, [person.id]: person } }, person };
 };
 
-export type PersonPatch = Partial<Pick<Person, 'name' | 'now' | 'notes' | 'order' | 'blocked'>>;
+export type PersonPatch = Partial<Pick<Person, 'name' | 'now' | 'notes' | 'order' | 'blocked' | 'color'>>;
 
 export const updatePerson = (document: NotebookDocument, id: string, patch: PersonPatch, context: CommandContext): NotebookDocument => {
   const current = document.people[id];
@@ -332,6 +337,15 @@ export const setTodayBlockCollapsed = (document: NotebookDocument, id: TodayBloc
 
   return updateSettings(document, { collapsedBlocks: collapsed ? [...others, id] : others }, context);
 };
+
+/** Folds a Notebook block section (carried over, mine, team) down to its header, or opens it again. */
+export const setNotebookSectionCollapsed = (document: NotebookDocument, id: NotebookSectionId, collapsed: boolean, context: CommandContext): NotebookDocument => {
+  const others = document.settings.notebookCollapsedSections.filter((sectionId) => sectionId !== id);
+
+  return updateSettings(document, { notebookCollapsedSections: collapsed ? [...others, id] : others }, context);
+};
+
+export const setNotebookSectionColor = (document: NotebookDocument, id: NotebookSectionId, color: SpaceColor, context: CommandContext): NotebookDocument => updateSettings(document, { notebookSectionColors: { ...document.settings.notebookSectionColors, [id]: color } }, context);
 
 /** Dismissals older than this are dropped: the Gmail block only lists the last 7 days of mail. */
 export const DISMISSED_EMAIL_TTL_DAYS = 14;
