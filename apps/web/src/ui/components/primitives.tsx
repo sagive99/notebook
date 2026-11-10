@@ -1,5 +1,7 @@
 import type { ComponentChildren } from 'preact';
+import type { SpaceColor } from '@notebook/core';
 import { useEffect, useRef } from 'preact/hooks';
+import { SPACE_COLORS } from '../format';
 
 export const Toggle = ({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) => (
   <button type="button" role="switch" aria-checked={checked} aria-label={label} class={`toggle ${checked ? 'toggle--on' : ''}`} onClick={() => onChange(!checked)}>
@@ -11,6 +13,16 @@ export const Chip = ({ selected, onClick, children, dashed }: { selected?: boole
   <button type="button" class={`chip ${selected ? 'chip--selected' : ''} ${dashed ? 'chip--dashed' : ''}`} aria-pressed={selected ?? false} onClick={onClick}>
     {children}
   </button>
+);
+
+const COLORS = Object.keys(SPACE_COLORS) as SpaceColor[];
+
+/** A row of colour choices. With `onAuto`, a first "Automatic" choice (value null) lets the app pick. */
+export const ColorSwatches = ({ label, value, onChange, onAuto }: { label: string; value: SpaceColor | null; onChange: (color: SpaceColor) => void; onAuto?: () => void }) => (
+  <div class="swatches" role="radiogroup" aria-label={label}>
+    {onAuto ? <button type="button" role="radio" aria-checked={value === null} aria-label="Automatic" class={`swatch swatch--auto ${value === null ? 'swatch--selected' : ''}`} onClick={onAuto} /> : null}
+    {COLORS.map((option) => <button key={option} type="button" role="radio" aria-checked={value === option} aria-label={option} class={`swatch ${value === option ? 'swatch--selected' : ''}`} style={{ background: SPACE_COLORS[option].swatch }} onClick={() => onChange(option)} />)}
+  </div>
 );
 
 export const SectionLabel = ({ children }: { children: ComponentChildren }) => <span class="section-label">{children}</span>;

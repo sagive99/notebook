@@ -39,6 +39,8 @@ export const itemSchema = z.object({
   order: z.number().finite().default(0),
 });
 
+export const spaceColorSchema = z.enum(['teal', 'blue', 'orange', 'purple', 'rose', 'slate']);
+
 export const personSchema = z.object({
   ...entityFields,
   name: z.string().min(1).max(120),
@@ -52,6 +54,11 @@ export const personSchema = z.object({
   /** Blocked on something outside their control; added after v1 shipped, hence the default. */
   blocked: z.boolean().default(false),
   notes: z.string().max(20_000).default(''),
+  /**
+   * The colour of the person's name tag and avatar; null means "not chosen" (a colour by roster position). Added after v1,
+   * hence the default. An older app version drops it when it saves the person; merge restores it on equal timestamps.
+   */
+  color: spaceColorSchema.nullable().default(null),
   order: z.number().finite().default(0),
 });
 
@@ -69,8 +76,6 @@ export const boardColumnSchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(60),
 });
-
-export const spaceColorSchema = z.enum(['teal', 'blue', 'orange', 'purple', 'rose', 'slate']);
 
 export const spaceSchema = z.object({
   ...entityFields,
@@ -129,6 +134,19 @@ export const settingsSchema = z.object({
    * settings, and dismissed emails come back until dismissed again.
    */
   dismissedEmails: z.array(dismissedEmailSchema).max(500).default([]),
+  /**
+   * The person who is the user. Their tasks sit under "Mine" in the Notebook block instead of "Team". Null means "not
+   * chosen": a person named "Me" or "אני" is then taken (see `selfPersonId`). Added after v1, hence the default.
+   */
+  selfPersonId: z.string().max(64).nullable().default(null),
+  /**
+   * Notebook block sections (`NotebookSectionId`) folded down to their header, and the colours the user gave them.
+   * Plain strings so a section added by a later version doesn't make this version reject the document. Added after
+   * v1, hence the defaults; an older app version drops them when it saves settings (accepted: sections reopen in
+   * their default colours).
+   */
+  notebookCollapsedSections: z.array(z.string().max(32)).max(16).default([]),
+  notebookSectionColors: z.record(z.string().max(32), spaceColorSchema).default({}),
 });
 
 export const DOCUMENT_VERSION = 1;

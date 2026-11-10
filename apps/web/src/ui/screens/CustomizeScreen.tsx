@@ -1,9 +1,10 @@
-import { liveSpaces, remindersUseCalendar, todayBlocks, updateSettings } from '@notebook/core';
+import { NOTEBOOK_SECTION_IDS, liveSpaces, remindersUseCalendar, setNotebookSectionColor, todayBlocks, updateSettings } from '@notebook/core';
 import type { NotebookDocument, TodayBlock, TodayBlockId } from '@notebook/core';
 import { useState } from 'preact/hooks';
 import { useAuthState, useCalendarList, useNotebook, useServices } from '../../state/hooks';
 import { ScreenHeader, SyncDot } from '../components/chrome';
-import { SectionLabel, Toggle } from '../components/primitives';
+import { ColorSwatches, SectionLabel, Toggle } from '../components/primitives';
+import { SECTION_DEFAULT_COLORS, SECTION_LABELS } from '../format';
 import { ArrowDownIcon, ArrowUpIcon } from '../icons';
 import { href } from '../router';
 import { SHORTCUT_NAME, openShortcut, remindersEnabled, setRemindersEnabled, testReminderUrl } from '../../state/reminders-handoff';
@@ -218,6 +219,19 @@ export const CustomizeScreen = () => {
               );
             })}
           </ul>
+        </div>
+
+        <div class="field">
+          <SectionLabel>Notebook sections</SectionLabel>
+          <div class="settings-list">
+            {NOTEBOOK_SECTION_IDS.map((id) => (
+              <div key={id} class="settings-row settings-row--stack">
+                <span class="settings-row__label">{SECTION_LABELS[id]}</span>
+                <ColorSwatches label={`${SECTION_LABELS[id]} colour`} value={document.settings.notebookSectionColors[id] ?? SECTION_DEFAULT_COLORS[id]} onChange={(color) => run((current, context) => setNotebookSectionColor(current, id, color, context))} />
+              </div>
+            ))}
+          </div>
+          <p class="hint">Tap a section’s name on Today to fold it away or bring it back. Each person’s own colour is set on their card in People.</p>
         </div>
 
         <div class="field">

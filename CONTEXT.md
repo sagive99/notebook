@@ -33,6 +33,8 @@ This document defines shared language and system-wide invariants. [CONTEXT-MAP.m
 | Waiting on | Open tasks linked to a person. |
 | Work | Items linked to a person or living in a work space, plus events from calendars marked Work and calendar reminders of work items. A space is work when flagged (`Space.work`); until the user chooses, People-layout spaces are. Loose notebook items are never work. |
 | Work switch | The Today toggle that hides everything work (items, team and work-space blocks, work calendar events). A view setting remembered per device; it deletes nothing. |
+| Notebook section | A part of the Notebook block on a day page: **Carried over** (the user's own), **Mine** (the rest of the user's day), **Team** (tasks linked to anyone else, by person). Each folds to its heading and has a colour the user can change. |
+| Me | The roster person who is the user (`Settings.selfPersonId`; until chosen, a person named "Me" or "אני"). Their tasks count as the user's own in notebook sections. |
 | Blocked | A person flagged as stuck on something outside their control. |
 | Tombstone | A deleted entity kept with `deleted: true` so deletions survive merging. |
 

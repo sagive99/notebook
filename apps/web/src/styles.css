@@ -314,3 +314,16 @@ mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 2px; 
 .work-note { text-align: center; padding: 4px 12px; }
 .chip--small { height: 30px; padding: 0 10px; font-size: 12px; position: relative; }
 .chip--small::after { content: ''; position: absolute; inset: -7px 0; }
+
+/* Notebook block sections (carried over, mine, team): a coloured rule and a heading that folds the section. */
+.nb-section { display: flex; flex-direction: column; border-inline-start: 3px solid var(--section); border-radius: 2px; padding-inline-start: 12px; }
+.nb-section + .nb-section { margin-top: 6px; }
+.nb-section__head { margin: 0; font-size: 13px; font-weight: 600; }
+.nb-section__toggle { width: 100%; min-height: 36px; display: flex; align-items: center; gap: 8px; padding: 0; border: none; background: none; color: var(--section-ink); font: inherit; text-align: start; }
+.nb-section__count { font-size: 12px; color: var(--section-ink); background: var(--section-soft); border-radius: 10px; padding: 2px 8px; }
+.nb-section__toggle .card__chevron { margin-inline-start: auto; color: var(--faint); }
+.item-row--quiet .tag--ongoing { background: var(--accent-soft); }
+.settings-row--stack { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 14px; }
+.settings-list .swatch--selected { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--ink); }
+.swatch--auto { background: conic-gradient(#0f7b6c, #2f4fd0, #5b3fa0, #b4235a, #c2410c, #0f7b6c); }
+.swatches { flex-wrap: wrap; }

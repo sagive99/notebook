@@ -6,7 +6,7 @@ import { useNotebook, useToday } from '../../state/hooks';
 import { clearRecentSearches, readRecentSearches, rememberSearch } from '../../state/recent-searches';
 import { Highlighted, ItemRow } from '../components/ItemRow';
 import { Empty } from '../components/primitives';
-import { AVATAR_TONES, SPACE_COLORS, initials } from '../format';
+import { SPACE_COLORS, initials, personTone } from '../format';
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon, CloseIcon, SearchIcon } from '../icons';
 import { href } from '../router';
 import { useSheets } from '../sheets/sheet-context';
@@ -145,7 +145,7 @@ export const SearchScreen = () => {
               <span class="section-label">People</span>
               <div class="people-row">
                 {livePeople(document).map((person, index) => {
-                  const tone = AVATAR_TONES[index % AVATAR_TONES.length];
+                  const tone = personTone(person, index);
                   const ongoing = ongoingPeople.has(person.id);
 
                   return (

@@ -1,5 +1,5 @@
 import { compareIsoDates } from './dates';
-import type { IsoDate, Item, NotebookDocument, Person, Settings, Space, TodayBlock } from './types';
+import type { IsoDate, Item, NotebookDocument, Person, Settings, Space, SpaceColor, TodayBlock } from './types';
 
 const live = <T extends { deleted: boolean }>(values: Record<string, T>): T[] => Object.values(values).filter((value) => !value.deleted);
 
@@ -86,6 +86,49 @@ export const dayPage = (document: NotebookDocument, day: IsoDate, today: IsoDate
     open: onDay.filter((item) => !item.done).sort(byTimeThenOrder),
     done: onDay.filter((item) => item.done).sort((left, right) => (left.doneAt ?? '').localeCompare(right.doneAt ?? '')),
   };
+};
+
+export const NOTEBOOK_SECTION_IDS = ['carried', 'mine', 'team'] as const;
+
+export type NotebookSectionId = (typeof NOTEBOOK_SECTION_IDS)[number];
+
+export type NotebookSection = {
+  id: NotebookSectionId;
+  items: Item[];
+  collapsed: boolean;
+  /** The colour the user chose for the section, or null for the app's default. */
+  color: SpaceColor | null;
+};
+
+const SELF_NAMES: ReadonlyArray<string> = ['me', 'אני'];
+
+/** The roster entry that is the user: the chosen one, or, until one is chosen, a person named "Me" / "אני". */
+export const selfPersonId = (document: NotebookDocument): string | null => {
+  const chosen = document.settings.selfPersonId ? document.people[document.settings.selfPersonId] : undefined;
+
+  if (chosen && !chosen.deleted) {
+    return chosen.id;
+  }
+
+  return livePeople(document).find((person) => SELF_NAMES.includes(person.name.trim().toLowerCase()))?.id ?? null;
+};
+
+/**
+ * The Notebook block's sections for a day page, empty ones left out: the user's carried-over tasks, the rest of their
+ * day, and the team's tasks (linked to anyone but the user, carried or not) grouped by person in roster order.
+ */
+export const notebookSections = (document: NotebookDocument, page: DayPage): NotebookSection[] => {
+  const self = selfPersonId(document);
+  const rosterPosition = new Map(livePeople(document).map((person, index) => [person.id, index]));
+  const isTeam = (item: Item): boolean => item.personId !== null && item.personId !== self && rosterPosition.has(item.personId);
+  const position = (item: Item): number => rosterPosition.get(item.personId ?? '') ?? 0;
+  const items: Record<NotebookSectionId, Item[]> = {
+    carried: page.carried.filter((item) => !isTeam(item)),
+    mine: page.open.filter((item) => !isTeam(item)),
+    team: [...page.open, ...page.carried].filter(isTeam).map((item, index) => ({ item, index })).sort((left, right) => position(left.item) - position(right.item) || left.index - right.index).map(({ item }) => item),
+  };
+
+  return NOTEBOOK_SECTION_IDS.filter((id) => items[id].length > 0).map((id) => ({ id, items: items[id], collapsed: document.settings.notebookCollapsedSections.includes(id), color: document.settings.notebookSectionColors[id] ?? null }));
 };
 
 export const spaceItems = (document: NotebookDocument, spaceId: string): Item[] => liveItems(document).filter((item) => item.spaceId === spaceId).sort(byOrder);
